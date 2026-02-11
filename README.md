@@ -1,50 +1,52 @@
-# Welcome to your Expo app 👋
+# violet-wallpaper-app
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+手机壁纸软件应用，使用 [Expo](https://expo.dev) 构建。
 
-## Get started
+## 快速开始
 
-1. Install dependencies
+1. 安装依赖
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. 启动开发服务器
+
+   ```bash
+   npm start
+   ```
+
+   或：
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+3. 运行应用
+   - [开发构建](https://docs.expo.dev/develop/development-builds/introduction/)
+   - [Android 模拟器](https://docs.expo.dev/workflow/android-studio-emulator/)
+   - [iOS 模拟器](https://docs.expo.dev/workflow/ios-simulator/)
+   - [Expo Go](https://expo.dev/go)：扫描二维码在真机预览
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 打包 (EAS Build)
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+需先登录：`eas login`
 
-## Get a fresh project
+| Profile     | 命令                                                 | 输出格式 | 用途             |
+| ----------- | ---------------------------------------------------- | -------- | ---------------- |
+| production  | `eas build --platform android --profile production`  | AAB      | 上架 Google Play |
+| preview-apk | `eas build --platform android --profile preview-apk` | APK      | 内测 / 直接安装  |
 
-When you're ready, run:
+均使用 `.env.production` 环境变量。
 
-```bash
-npm run reset-project
-```
+## 技术栈
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- React Native + Expo
+- expo-router（路由）
 
-## Learn more
+## 更多资源
 
-To learn more about developing your project with Expo, look at the following resources:
+- [Expo 文档](https://docs.expo.dev/)
+- [Expo 教程](https://docs.expo.dev/tutorial/introduction/)
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 可扩展项
