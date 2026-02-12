@@ -50,7 +50,6 @@
    ```
 
 3. **运行与调试**
-
    - [开发构建](https://docs.expo.dev/develop/development-builds/introduction/)
    - [Android 模拟器](https://docs.expo.dev/workflow/android-studio-emulator/)
    - [iOS 模拟器](https://docs.expo.dev/workflow/ios-simulator/)
@@ -62,10 +61,10 @@
 
 项目使用 Expo SDK 54，并在 `package.json` 中预置了常用检查脚本，建议在安装或升级依赖后执行一次：
 
-| 命令                   | 说明                                                                 |
-|------------------------|----------------------------------------------------------------------|
-| `pnpm run doctor`      | 运行 `expo-doctor`，检查依赖版本、锁文件、配置是否与当前 SDK 匹配   |
-| `pnpm run install:check` | 运行 `expo install --check`，仅检查各包版本是否符合 SDK 推荐版本 |
+| 命令                     | 说明                                                              |
+| ------------------------ | ----------------------------------------------------------------- |
+| `pnpm run doctor`        | 运行 `expo-doctor`，检查依赖版本、锁文件、配置是否与当前 SDK 匹配 |
+| `pnpm run install:check` | 运行 `expo install --check`，仅检查各包版本是否符合 SDK 推荐版本  |
 
 如果 `expo-doctor` 报依赖版本不匹配，可使用：
 
@@ -87,12 +86,12 @@ eas login
 
 `eas.json` 中已配置基于 Node `22.21.1` 与 pnpm `9.15.0` 的统一构建基线：
 
-| Profile      | 命令                                                          | 平台   | 输出格式 | 用途               |
-|-------------|---------------------------------------------------------------|--------|----------|--------------------|
-| development | `eas build --platform android --profile development`          | Android | 内部调试 | 开发客户端 / 内测  |
-| preview     | `eas build --platform android --profile preview`              | Android | AAB      | 预发布 / 内部发布  |
-| production  | `eas build --platform android --profile production`           | Android | AAB      | 上架 Google Play   |
-| preview-apk | `eas build --platform android --profile preview-apk`          | Android | APK      | 线下内测 / 直接安装 |
+| Profile     | 命令                                                 | 平台    | 输出格式 | 用途                |
+| ----------- | ---------------------------------------------------- | ------- | -------- | ------------------- |
+| development | `eas build --platform android --profile development` | Android | 内部调试 | 开发客户端 / 内测   |
+| preview     | `eas build --platform android --profile preview`     | Android | AAB      | 预发布 / 内部发布   |
+| production  | `eas build --platform android --profile production`  | Android | AAB      | 上架 Google Play    |
+| preview-apk | `eas build --platform android --profile preview-apk` | Android | APK      | 线下内测 / 直接安装 |
 
 - `production` / `preview-apk` Profile 中会注入 `APP_ENV=production`。
 - 构建时通常配合 `.env.production` 使用，按需在其中配置 API 域名、埋点等运行时常量。
@@ -128,7 +127,7 @@ pnpm exec expo run:android
 
 如果自动启动模拟器超时，可以先手动打开 AVD，或改用下面的方式二。
 
-### 方式二：手动 prebuild + Gradle 打 Debug APK
+### 方式二：手动 prebuild + Gradle 打 Debug APK (推荐)
 
 当你明确希望拿到一个 **可拷贝 / 可分发的调试 APK 文件** 时，推荐使用此方式。
 
@@ -160,6 +159,8 @@ pnpm exec expo run:android
    ```
 
    构建成功后，控制台会输出 `BUILD SUCCESSFUL`。
+
+需要注意: 本地构建时，**建议开启梯子并启用 tun 模式**，否则可能因网络受限导致gradle构建失败。
 
 3. **查找并安装 APK**
 
