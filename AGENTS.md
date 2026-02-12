@@ -1,5 +1,4 @@
 ## 项目介绍
-
 这是一个壁纸软件，当前主要有两大模块：手机壁纸、头像壁纸
 
 ## 技术栈
@@ -22,40 +21,34 @@
 
 - Windows 11 / Powershell
 
-### 构建与运行（npm）
+### 构建与运行（pnpm）
 
-- 默认使用 npm 进行依赖安装与运行
-- 安装依赖: `npm install`
-- 启动开发: `npm start`（Expo 开发服务器）
-- 可选: `npm run android`、`npm run ios`、`npm run web`
-- 代码检查: `npm run lint`
+- 默认使用 pnpm 进行依赖安装与运行
+- 安装依赖: `pnpm install`
+- 启动开发: `pnpm start`（Expo 开发服务器）
+- 可选: `pnpm run android`、`pnpm run ios`、`pnpm run web`
+- 代码检查: `pnpm run lint`
 
 ## 编码指南
 
-- 代码遵循现代化的 Vue 3 Composition API + TypeScript 开发最佳实践
+- 代码遵循现代化的 React + TypeScript 开发最佳实践
 - 避免冗余注释，确保代码自解释性
 - 尽量使用较新的依赖版本，避免使用过时的库，不要使用任何废弃的接口
 - 除非明确要求，代码编写不需要考虑兼容性，也不要保留无用代码，但是可以提醒注意潜在的兼容性问题
 - 遇到问题不要试图绕过或者使用回退方案，要么解决问题要么报告问题
 
-### Vue 组件规范
+### React 组件规范
 
-- 使用 `<script setup lang="ts">` 语法编写组件
 - 组件文件使用 PascalCase 命名，例如 `UserProfile.vue`
 - 组合式函数使用 `use` 前缀，例如 `useUserData.ts`
-- Props 和 Emits 必须使用 TypeScript 类型定义
 
 ### 样式规范
 
 - 全局样式和主题变量定义在 `src/styles/` 目录
-- 组件私有样式使用 `<style scoped lang="scss">`
 - 遵循 Element-Plus 的设计规范和主题变量
 
 ### 状态管理规范
 
-- 使用 Pinia 进行状态管理
-- Store 文件放在 `src/store/` 目录
-- Store 命名使用 `use<Name>Store` 格式，例如 `useProjectStore`
 
 ### API 调用规范
 
