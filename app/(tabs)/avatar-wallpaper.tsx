@@ -8,6 +8,7 @@ import {
 } from '@/src/api/controllers/pictures';
 import type { components } from '@/src/api/openapi-schema';
 import { File, Paths } from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -74,12 +75,12 @@ export default function AvatarWallpaperScreen() {
 
   const hasMore = records.length < total;
 
-  /** 下载图片到本地（先调详情接口取原图 url，再写入应用文档目录） */
+  /** 下载图片并保存到系统相册（先调详情取原图 url，再写入相册，用户可在相册/图库中查看） */
   const handleDownload = useCallback(async () => {
     const item = selectedItem;
     if (!item) return;
     if (Platform.OS === 'web') {
-      Alert.alert('提示', '请使用手机 App 下载到本地');
+      Alert.alert('提示', '请使用手机 App 下载到相册');
       return;
     }
     setDownloading(true);
@@ -93,9 +94,16 @@ export default function AvatarWallpaperScreen() {
         return;
       }
       const ext = uri.includes('.webp') ? 'webp' : 'jpg';
-      const dest = new File(Paths.document, `avatar_${item.id}.${ext}`);
+      const dest = new File(Paths.cache, `avatar_${item.id}.${ext}`);
       await File.downloadFileAsync(uri, dest, { idempotent: true });
-      Alert.alert('成功', '已保存到本地');
+
+      const { status } = await MediaLibrary.requestPermissionsAsync(true);
+      if (status !== 'granted') {
+        Alert.alert('需要权限', '请允许保存到相册，否则无法在相册中查看');
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(dest.uri);
+      Alert.alert('成功', '已保存到相册，可在相册/图库中查看');
       setSelectedItem(null);
     } catch (err) {
       Alert.alert('下载失败', (err as Error)?.message ?? '请稍后重试');

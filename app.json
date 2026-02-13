@@ -29,6 +29,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-media-library",
+        {
+          "photosPermission": "允许访问您的相册以选择图片。",
+          "savePhotosPermission": "允许将下载的头像保存到相册。"
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

@@ -6,7 +6,6 @@ import {
   getPictureApiPicturesPictureIdGet,
   listWallpapersApiPicturesListGet,
 } from '@/src/api/controllers/pictures';
-import ManageWallpaper, { TYPE } from 'react-native-manage-wallpaper';
 import type { components } from '@/src/api/openapi-schema';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -103,6 +102,13 @@ export default function MobileWallpaperDetailScreen() {
         const uri = detail.url ?? detail.webp_url ?? detail.thumbnail_url ?? null;
         if (!uri) {
           Alert.alert('失败', '无法获取图片地址');
+          return;
+        }
+        const WallpaperModule = require('react-native-manage-wallpaper');
+        const ManageWallpaper = WallpaperModule.default;
+        const TYPE = WallpaperModule.TYPE;
+        if (!ManageWallpaper?.setWallpaper || TYPE == null) {
+          Alert.alert('设置失败', '当前环境不支持设置壁纸，请使用开发版或正式包（Expo Go 不支持）');
           return;
         }
         const wallpaperType = mode === 'home' ? TYPE.HOME : mode === 'lock' ? TYPE.LOCK : TYPE.BOTH;
