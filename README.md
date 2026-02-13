@@ -158,6 +158,114 @@ pnpm exec expo run:android
    ./gradlew assembleDebug
    ```
 
+   **Debug 与 Release 包的区别：**
+
+   | 类型 | 命令 | JS 打包 | 依赖 Metro | 用途 |
+   |------|------|---------|-----------|------|
+   | **Debug** | `assembleDebug` | ❌ 不打包，需从开发服务器加载 | ✅ 需要电脑运行 `expo start` | 开发调试，需与电脑同一 WiFi |
+   | **Release** | `assembleRelease` | ✅ JS 打包进 APK | ❌ 可独立运行 | 分发测试、正式发布 |
+
+   **打 Release 包（独立运行，不依赖 Metro）：**
+
+   在 Windows（PowerShell / CMD）中：
+
+   ```bash
+   cd android
+   .\gradlew.bat assembleRelease
+   ```
+
+   在 macOS / Linux 中：
+
+   ```bash
+   cd android
+   ./gradlew assembleRelease
+   ```
+
+   Release APK 输出路径：
+
+   ```text
+   android/app/build/outputs/apk/release/app-release.apk
+   ```
+
+   > **注意**：Release 包需要配置签名（`android/app/build.gradle` 中的 `signingConfig`），否则可能无法安装或无法上架。未配置时，可先用 Debug 包测试功能，正式发布时使用 EAS Build。
+
+   **⚠️ Release 包接口不通的常见问题：**
+
+   1. **API 地址未被打包（最常见）**：
+
+      **方案 A：使用 `app.json` 配置（推荐，已配置）**
+
+      已在 `app.json` 的 `extra.apiBaseUrl` 中配置了 API 地址，代码会优先从这里读取。修改 `app.json` 后需要重新 prebuild：
+
+      ```bash
+      npx expo prebuild --platform android --clean
+      cd android
+      .\gradlew.bat assembleRelease
+      ```
+
+      **方案 B：使用环境变量（需在构建时设置）**
+
+      如果使用环境变量，确保在构建前设置：
+
+      ```bash
+      # Windows PowerShell
+      $env:EXPO_PUBLIC_API_BASE_URL="http://192.168.0.178:8203"
+      cd android
+      .\gradlew.bat assembleRelease
+
+      # Windows CMD
+      set EXPO_PUBLIC_API_BASE_URL=http://192.168.0.178:8203
+      cd android
+      .\gradlew.bat assembleRelease
+
+      # macOS / Linux
+      EXPO_PUBLIC_API_BASE_URL=http://192.168.0.178:8203 ./gradlew assembleRelease
+      ```
+
+      **排查方法**：安装 Release APK 后，用 `adb logcat | findstr "API Config"` 查看实际使用的 API 地址。如果显示 `http://127.0.0.1:8203`，说明配置未生效。
+
+   2. **Android 9+ 阻止 HTTP 请求**：如果 API 使用 `http://`（非 HTTPS），需要配置允许 HTTP。有两种方式：
+
+      **方式 A：在 `app.json` 中配置（推荐，自动生成）**
+
+      在 `app.json` 的 `expo.android` 中添加 `usesCleartextTraffic: true`：
+
+      ```json
+      {
+        "expo": {
+          "android": {
+            "usesCleartextTraffic": true,
+            // ... 其他配置
+          }
+        }
+      }
+      ```
+
+      然后重新执行 `expo prebuild`，Expo 会自动生成网络安全配置。
+
+      **方式 B：手动创建文件（如果已 prebuild，不想改 app.json）**
+
+      1. 创建文件 `android/app/src/main/res/xml/network_security_config.xml`（如果 `res/xml/` 目录不存在，需要先创建）：
+
+         ```xml
+         <?xml version="1.0" encoding="utf-8"?>
+         <network-security-config>
+           <base-config cleartextTrafficPermitted="true">
+             <trust-anchors>
+               <certificates src="system" />
+             </trust-anchors>
+           </base-config>
+         </network-security-config>
+         ```
+
+      2. 在 `android/app/src/main/AndroidManifest.xml` 的 `<application>` 标签中添加：
+
+         ```xml
+         android:networkSecurityConfig="@xml/network_security_config"
+         ```
+
+   3. **网络可达性**：确保手机和服务器在同一 WiFi，或使用公网可访问的服务器地址。
+
    构建成功后，控制台会输出 `BUILD SUCCESSFUL`。
 
 需要注意: 本地构建时，**建议开启梯子并启用 tun 模式**，否则可能因网络受限导致gradle构建失败。

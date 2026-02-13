@@ -20,7 +20,14 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.carolinviolet.violetwallpaperapp"
+      "package": "com.carolinviolet.violetwallpaperapp",
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "web": {
       "output": "static",
@@ -46,6 +53,31 @@
             "backgroundColor": "#000000"
           }
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": {
+              "cleartextTrafficPermitted": true,
+              "domain": [
+                {
+                  "includeSubdomains": true,
+                  "name": "192.168.0.178"
+                },
+                {
+                  "includeSubdomains": true,
+                  "name": "localhost"
+                },
+                {
+                  "includeSubdomains": true,
+                  "name": "10.0.2.2"
+                }
+              ]
+            }
+          }
+        }
       ]
     ],
     "experiments": {
@@ -56,7 +88,8 @@
       "router": {},
       "eas": {
         "projectId": "1bebdb56-e5d2-4511-8e88-ec54368f3557"
-      }
+      },
+      "apiBaseUrl": "http://192.168.0.178:8203"
     }
   }
 }

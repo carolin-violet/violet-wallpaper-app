@@ -3,6 +3,7 @@
  * 提供带完整类型推导的请求方法。
  */
 
+import Constants from 'expo-constants';
 import type { paths } from './openapi-schema';
 
 /**
@@ -172,14 +173,35 @@ export interface ApiRequestConfig<
 }
 
 /**
- * 默认后端基础地址，可通过 .env.development 中 EXPO_PUBLIC_API_BASE_URL 覆盖。
- * 真机调试时务必用本机局域网 IP（如 http://192.168.x.x:8203），127.0.0.1 仅模拟器可用。
+ * 默认后端基础地址，优先级：
+ * 1. app.json 的 extra.apiBaseUrl（最可靠，会打包进 Release）
+ * 2. 环境变量 EXPO_PUBLIC_API_BASE_URL（开发时）
+ * 3. 默认值 http://192.168.0.178:8203
  */
-const DEFAULT_API_BASE_URL =
-  (typeof process !== 'undefined' &&
+const getApiBaseUrl = (): string => {
+  // 优先从 app.json 的 extra 读取（Release 包中可靠）
+  const fromExtra = Constants.expoConfig?.extra?.apiBaseUrl as string | undefined;
+  if (fromExtra) return fromExtra;
+
+  // 其次从环境变量读取（开发时）
+  const fromEnv =
+    typeof process !== 'undefined' &&
     (process as any).env &&
-    ((process as any).env.EXPO_PUBLIC_API_BASE_URL as string | undefined)) ||
-  'http://127.0.0.1:8203';
+    ((process as any).env.EXPO_PUBLIC_API_BASE_URL as string | undefined);
+  if (fromEnv) return fromEnv;
+
+  // 默认值
+  return 'http://192.168.0.178:8203';
+};
+
+const DEFAULT_API_BASE_URL = getApiBaseUrl();
+
+// 调试：输出实际使用的 API 地址（Release 包中也会输出，便于排查）
+if (typeof console !== 'undefined') {
+  console.log('[API Config] DEFAULT_API_BASE_URL:', DEFAULT_API_BASE_URL);
+  console.log('[API Config] from extra.apiBaseUrl:', Constants.expoConfig?.extra?.apiBaseUrl);
+  console.log('[API Config] from env:', (process as any).env?.EXPO_PUBLIC_API_BASE_URL);
+}
 
 /**
  * 构建带路径参数的 URL 路径
@@ -281,11 +303,9 @@ export async function apiRequest<
 
   const url = `${base}${finalPath}${queryString}`;
 
-  if (__DEV__) {
-    // 开发环境：请求会打到 Metro 终端，便于真机排查「没数据」是未请求、接口报错还是 URL/网络问题
-    const methodUpper = String(method).toUpperCase();
-    console.log(`[API] ${methodUpper} ${url}`);
-  }
+  // 生产环境也输出请求日志，便于排查问题
+  const methodUpper = String(method).toUpperCase();
+  console.log(`[API Request] ${methodUpper} ${url}`);
 
   const headers = mergeHeaders(
     init?.headers,
@@ -323,23 +343,17 @@ export async function apiRequest<
       body: requestBody,
     });
   } catch (networkError) {
-    if (__DEV__) {
-      const msg =
-        networkError instanceof Error ? networkError.message : String(networkError);
-      console.warn('[API] 网络异常', url, msg);
-    }
+    const msg =
+      networkError instanceof Error ? networkError.message : String(networkError);
+    console.error('[API Network Error]', url, msg);
     throw networkError;
   }
 
-  if (__DEV__) {
-    console.log(`[API] ${response.status} ${url}`);
-  }
+  console.log(`[API Response] ${response.status} ${url}`);
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
-    if (__DEV__) {
-      console.warn('[API] 请求失败', response.status, errorText || response.statusText);
-    }
+    console.error('[API Error]', response.status, errorText || response.statusText);
     throw new Error(
       `请求失败: ${response.status} ${response.statusText}${
         errorText ? ` - ${errorText}` : ''
