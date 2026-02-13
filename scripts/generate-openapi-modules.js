@@ -29,7 +29,7 @@ function getOpenApiUrl() {
   if (envUrl && typeof envUrl === 'string') {
     return envUrl;
   }
-  return 'http://127.0.0.1:8203/openapi.json';
+  return process.env.EXPO_PUBLIC_API_BASE_URL + '/openapi.json';
 }
 
 /**

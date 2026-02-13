@@ -72,34 +72,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/pictures/{picture_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * 查询单个图片详情
-         * @description 根据图片ID查询单个图片的所有信息。
-         */
-        get: operations["get_picture_api_pictures__picture_id__get"];
-        /**
-         * 编辑壁纸信息
-         * @description 编辑壁纸信息，主要修改标签、分类、审核状态。
-         */
-        put: operations["update_wallpaper_api_pictures__picture_id__put"];
-        post?: never;
-        /**
-         * 删除壁纸
-         * @description 删除指定壁纸。先删除 MinIO 文件，再删除数据库记录。
-         */
-        delete: operations["delete_wallpaper_api_pictures__picture_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/pictures/{picture_id}/download": {
         parameters: {
             query?: never;
@@ -135,6 +107,30 @@ export interface paths {
          */
         post: operations["increment_picture_view_api_pictures__picture_id__view_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/pictures/{picture_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 编辑壁纸信息
+         * @description 编辑壁纸信息，主要修改标签、分类、审核状态。
+         */
+        put: operations["update_wallpaper_api_pictures__picture_id__put"];
+        post?: never;
+        /**
+         * 删除壁纸
+         * @description 删除指定壁纸。先删除 MinIO 文件，再删除数据库记录。
+         */
+        delete: operations["delete_wallpaper_api_pictures__picture_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -798,7 +794,7 @@ export interface operations {
             };
         };
     };
-    get_picture_api_pictures__picture_id__get: {
+    download_picture_api_pictures__picture_id__download_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -815,7 +811,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PictureUploadResponse"];
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Client Error */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "client-error-type",
+                     *       "title": "User facing error message.",
+                     *       "status": 400,
+                     *       "detail": "Additional error context."
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Server Error */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "type": "server-error-type",
+                     *       "title": "User facing error message.",
+                     *       "status": 500,
+                     *       "detail": "Additional error context."
+                     *     }
+                     */
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    increment_picture_view_api_pictures__picture_id__view_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                picture_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */
@@ -933,136 +994,6 @@ export interface operations {
         };
     };
     delete_wallpaper_api_pictures__picture_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                picture_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Client Error */
-            "4XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "client-error-type",
-                     *       "title": "User facing error message.",
-                     *       "status": 400,
-                     *       "detail": "Additional error context."
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Server Error */
-            "5XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "server-error-type",
-                     *       "title": "User facing error message.",
-                     *       "status": 500,
-                     *       "detail": "Additional error context."
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    download_picture_api_pictures__picture_id__download_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                picture_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-            /** @description Client Error */
-            "4XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "client-error-type",
-                     *       "title": "User facing error message.",
-                     *       "status": 400,
-                     *       "detail": "Additional error context."
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-            /** @description Server Error */
-            "5XX": {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    /**
-                     * @example {
-                     *       "type": "server-error-type",
-                     *       "title": "User facing error message.",
-                     *       "status": 500,
-                     *       "detail": "Additional error context."
-                     *     }
-                     */
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    increment_picture_view_api_pictures__picture_id__view_post: {
         parameters: {
             query?: never;
             header?: never;

@@ -172,10 +172,10 @@ export interface ApiRequestConfig<
 }
 
 /**
- * 默认后端基础地址，可以通过环境变量覆盖
+ * 默认后端基础地址，可通过 .env.development 中 EXPO_PUBLIC_API_BASE_URL 覆盖。
+ * 真机调试时务必用本机局域网 IP（如 http://192.168.x.x:8203），127.0.0.1 仅模拟器可用。
  */
 const DEFAULT_API_BASE_URL =
-  // Expo 公共环境变量优先
   (typeof process !== 'undefined' &&
     (process as any).env &&
     ((process as any).env.EXPO_PUBLIC_API_BASE_URL as string | undefined)) ||
@@ -281,6 +281,12 @@ export async function apiRequest<
 
   const url = `${base}${finalPath}${queryString}`;
 
+  if (__DEV__) {
+    // 开发环境：请求会打到 Metro 终端，便于真机排查「没数据」是未请求、接口报错还是 URL/网络问题
+    const methodUpper = String(method).toUpperCase();
+    console.log(`[API] ${methodUpper} ${url}`);
+  }
+
   const headers = mergeHeaders(
     init?.headers,
     (params?.header ?? undefined) as Record<string, unknown> | undefined,
@@ -308,15 +314,32 @@ export async function apiRequest<
     }
   }
 
-  const response = await fetch(url, {
-    ...init,
-    method: String(method).toUpperCase(),
-    headers,
-    body: requestBody,
-  });
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      method: String(method).toUpperCase(),
+      headers,
+      body: requestBody,
+    });
+  } catch (networkError) {
+    if (__DEV__) {
+      const msg =
+        networkError instanceof Error ? networkError.message : String(networkError);
+      console.warn('[API] 网络异常', url, msg);
+    }
+    throw networkError;
+  }
+
+  if (__DEV__) {
+    console.log(`[API] ${response.status} ${url}`);
+  }
 
   if (!response.ok) {
     const errorText = await response.text().catch(() => '');
+    if (__DEV__) {
+      console.warn('[API] 请求失败', response.status, errorText || response.statusText);
+    }
     throw new Error(
       `请求失败: ${response.status} ${response.statusText}${
         errorText ? ` - ${errorText}` : ''
