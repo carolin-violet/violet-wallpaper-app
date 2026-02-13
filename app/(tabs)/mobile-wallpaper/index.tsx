@@ -27,7 +27,9 @@ function useCategories() {
 
   useEffect(() => {
     let cancelled = false;
-    getAllDictionariesApiDictionariesGet()
+    getAllDictionariesApiDictionariesGet({
+      params: { query: { type: 0 } },
+    } as unknown as Parameters<typeof getAllDictionariesApiDictionariesGet>[0])
       .then((res) => {
         if (cancelled) return;
         const data = res as unknown as { records?: CategoryItem[] };

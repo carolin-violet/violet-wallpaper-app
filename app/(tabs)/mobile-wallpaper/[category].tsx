@@ -2,15 +2,23 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { listWallpapersApiPicturesListGet } from '@/src/api/controllers/pictures';
+import {
+  getPictureApiPicturesPictureIdGet,
+  listWallpapersApiPicturesListGet,
+} from '@/src/api/controllers/pictures';
+import ManageWallpaper, { TYPE } from 'react-native-manage-wallpaper';
 import type { components } from '@/src/api/openapi-schema';
 import { Image } from 'expo-image';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -73,8 +81,48 @@ export default function MobileWallpaperDetailScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  /** 当前选中要操作的图片，非空时显示操作弹层 */
+  const [selectedItem, setSelectedItem] = useState<PictureItem | null>(null);
 
   const hasMore = records.length < total;
+
+  /** 将图片应用于壁纸/锁屏（Android 使用 react-native-manage-wallpaper；先调详情接口取原图 url） */
+  const handleApplyWallpaper = useCallback(
+    async (item: PictureItem, mode: 'home' | 'lock' | 'both') => {
+      setSelectedItem(null);
+
+      if (Platform.OS !== 'android') {
+        Alert.alert('提示', '设置壁纸当前仅支持 Android 设备，请使用 Android 手机尝试。');
+        return;
+      }
+
+      try {
+        const detail = await getPictureApiPicturesPictureIdGet({
+          params: { path: { picture_id: item.id } },
+        });
+        const uri = detail.url ?? detail.webp_url ?? detail.thumbnail_url ?? null;
+        if (!uri) {
+          Alert.alert('失败', '无法获取图片地址');
+          return;
+        }
+        const wallpaperType = mode === 'home' ? TYPE.HOME : mode === 'lock' ? TYPE.LOCK : TYPE.BOTH;
+        ManageWallpaper.setWallpaper(
+          { uri },
+          (res: { status: string; msg?: string }) => {
+            if (res.status === 'success') {
+              Alert.alert('成功', '壁纸已设置');
+            } else {
+              Alert.alert('设置失败', res.msg ?? '设置壁纸失败');
+            }
+          },
+          wallpaperType,
+        );
+      } catch (err) {
+        Alert.alert('设置失败', (err as Error)?.message ?? '请使用开发版或正式包重试（Expo Go 不支持）');
+      }
+    },
+    [],
+  );
 
   const fetchPage = useCallback(
     async (page: number, append: boolean) => {
@@ -192,7 +240,7 @@ export default function MobileWallpaperDetailScreen() {
         <View style={[styles.row, { gap }]}>
           <View style={styles.column}>
             {left.map((item) => (
-              <View
+              <Pressable
                 key={item.id}
                 style={[
                   styles.card,
@@ -203,6 +251,7 @@ export default function MobileWallpaperDetailScreen() {
                     marginBottom: gap,
                   },
                 ]}
+                onPress={() => setSelectedItem(item)}
               >
                 <Image
                   source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
@@ -210,12 +259,12 @@ export default function MobileWallpaperDetailScreen() {
                   contentFit="cover"
                   recyclingKey={String(item.id)}
                 />
-              </View>
+              </Pressable>
             ))}
           </View>
           <View style={styles.column}>
             {right.map((item) => (
-              <View
+              <Pressable
                 key={item.id}
                 style={[
                   styles.card,
@@ -226,6 +275,7 @@ export default function MobileWallpaperDetailScreen() {
                     marginBottom: gap,
                   },
                 ]}
+                onPress={() => setSelectedItem(item)}
               >
                 <Image
                   source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
@@ -233,7 +283,7 @@ export default function MobileWallpaperDetailScreen() {
                   contentFit="cover"
                   recyclingKey={String(item.id)}
                 />
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>
@@ -250,6 +300,72 @@ export default function MobileWallpaperDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* 图片操作弹层：应用于壁纸 / 锁屏 / 同时应用 */}
+      <Modal
+        visible={!!selectedItem}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedItem(null)}
+      >
+        <Pressable
+          style={styles.actionSheetOverlay}
+          onPress={() => setSelectedItem(null)}
+        >
+          <Pressable
+            style={[
+              styles.actionSheetBox,
+              {
+                backgroundColor: isDark ? '#1e293b' : '#fff',
+                paddingBottom: 24 + (insets.bottom || 0),
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            {selectedItem ? (
+              <>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionSheetItem,
+                    pressed && styles.actionSheetItemPressed,
+                  ]}
+                  onPress={() => handleApplyWallpaper(selectedItem, 'home')}
+                >
+                  <ThemedText type="defaultSemiBold">将图片应用于壁纸</ThemedText>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionSheetItem,
+                    pressed && styles.actionSheetItemPressed,
+                  ]}
+                  onPress={() => handleApplyWallpaper(selectedItem, 'lock')}
+                >
+                  <ThemedText type="defaultSemiBold">将图片应用于锁屏</ThemedText>
+                </Pressable>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionSheetItem,
+                    pressed && styles.actionSheetItemPressed,
+                  ]}
+                  onPress={() => handleApplyWallpaper(selectedItem, 'both')}
+                >
+                  <ThemedText type="defaultSemiBold">同时应用于壁纸与锁屏</ThemedText>
+                </Pressable>
+                <View style={[styles.actionSheetDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} />
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionSheetItem,
+                    pressed && styles.actionSheetItemPressed,
+                  ]}
+                  onPress={() => setSelectedItem(null)}
+                >
+                  <ThemedText style={styles.actionSheetCancel}>取消</ThemedText>
+                </Pressable>
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </ThemedView>
   );
 }
@@ -298,5 +414,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  actionSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  actionSheetBox: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingTop: 8,
+    paddingHorizontal: 16,
+  },
+  actionSheetItem: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  actionSheetItemPressed: {
+    opacity: 0.7,
+  },
+  actionSheetDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 4,
+  },
+  actionSheetCancel: {
+    opacity: 0.8,
   },
 });

@@ -34,6 +34,19 @@ export function deleteWallpaperApiPicturesPictureIdDelete(config?: Omit<ApiReque
 }
 
 /**
+ * 查询单个图片详情
+ * operationId: get_picture_api_pictures__picture_id__get
+ */
+export function getPictureApiPicturesPictureIdGet(config?: Omit<ApiRequestConfig<'/api/pictures/{picture_id}', 'get'>, 'path' | 'method'>,
+): Promise<ApiResponse<'/api/pictures/{picture_id}', 'get'>> {
+  return apiRequest<'/api/pictures/{picture_id}', 'get'>({
+    ...(config as ApiRequestConfig<'/api/pictures/{picture_id}', 'get'> | undefined),
+    path: '/api/pictures/{picture_id}',
+    method: 'get',
+  });
+}
+
+/**
  * 编辑壁纸信息
  * operationId: update_wallpaper_api_pictures__picture_id__put
  */

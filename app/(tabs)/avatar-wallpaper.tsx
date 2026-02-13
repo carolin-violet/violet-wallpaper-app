@@ -2,14 +2,22 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { listWallpapersApiPicturesListGet } from '@/src/api/controllers/pictures';
+import {
+  getPictureApiPicturesPictureIdGet,
+  listWallpapersApiPicturesListGet,
+} from '@/src/api/controllers/pictures';
 import type { components } from '@/src/api/openapi-schema';
+import { File, Paths } from 'expo-file-system';
 import { Image } from 'expo-image';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   NativeScrollEvent,
   NativeSyntheticEvent,
+  Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -60,8 +68,41 @@ export default function AvatarWallpaperScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  /** 当前选中的图片，非空时显示操作弹窗 */
+  const [selectedItem, setSelectedItem] = useState<PictureItem | null>(null);
+  const [downloading, setDownloading] = useState(false);
 
   const hasMore = records.length < total;
+
+  /** 下载图片到本地（先调详情接口取原图 url，再写入应用文档目录） */
+  const handleDownload = useCallback(async () => {
+    const item = selectedItem;
+    if (!item) return;
+    if (Platform.OS === 'web') {
+      Alert.alert('提示', '请使用手机 App 下载到本地');
+      return;
+    }
+    setDownloading(true);
+    try {
+      const detail = await getPictureApiPicturesPictureIdGet({
+        params: { path: { picture_id: item.id } },
+      });
+      const uri = detail.url ?? detail.webp_url ?? detail.thumbnail_url ?? null;
+      if (!uri) {
+        Alert.alert('失败', '无法获取图片地址');
+        return;
+      }
+      const ext = uri.includes('.webp') ? 'webp' : 'jpg';
+      const dest = new File(Paths.document, `avatar_${item.id}.${ext}`);
+      await File.downloadFileAsync(uri, dest, { idempotent: true });
+      Alert.alert('成功', '已保存到本地');
+      setSelectedItem(null);
+    } catch (err) {
+      Alert.alert('下载失败', (err as Error)?.message ?? '请稍后重试');
+    } finally {
+      setDownloading(false);
+    }
+  }, [selectedItem]);
 
   const fetchPage = useCallback(async (page: number, append: boolean) => {
     if (page === 1) setLoading(true);
@@ -165,8 +206,9 @@ export default function AvatarWallpaperScreen() {
         <View style={[styles.row, { gap }]}>
           <View style={styles.column}>
             {left.map((item) => (
-              <View
+              <Pressable
                 key={item.id}
+                onPress={() => setSelectedItem(item)}
                 style={[
                   styles.card,
                   {
@@ -183,13 +225,14 @@ export default function AvatarWallpaperScreen() {
                   contentFit="cover"
                   recyclingKey={String(item.id)}
                 />
-              </View>
+              </Pressable>
             ))}
           </View>
           <View style={styles.column}>
             {right.map((item) => (
-              <View
+              <Pressable
                 key={item.id}
+                onPress={() => setSelectedItem(item)}
                 style={[
                   styles.card,
                   {
@@ -206,10 +249,60 @@ export default function AvatarWallpaperScreen() {
                   contentFit="cover"
                   recyclingKey={String(item.id)}
                 />
-              </View>
+              </Pressable>
             ))}
           </View>
         </View>
+        <Modal
+          visible={selectedItem !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setSelectedItem(null)}
+        >
+          <Pressable
+            style={styles.modalBackdrop}
+            onPress={() => setSelectedItem(null)}
+          >
+            <Pressable
+              style={[
+                styles.modalContent,
+                { backgroundColor: isDark ? Colors.dark.background : '#fff' },
+              ]}
+              onPress={() => {}}
+            >
+              <ThemedText type="subtitle" style={styles.modalTitle}>
+                保存图片
+              </ThemedText>
+              <Pressable
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleDownload}
+                disabled={downloading}
+              >
+                {downloading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <ThemedText style={styles.modalButtonPrimaryText}>
+                    下载到本地
+                  </ThemedText>
+                )}
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.modalButton,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
+                ]}
+                onPress={() => setSelectedItem(null)}
+                disabled={downloading}
+              >
+                <ThemedText
+                  style={[styles.modalButtonText, { color: isDark ? Colors.dark.text : '#333' }]}
+                >
+                  取消
+                </ThemedText>
+              </Pressable>
+            </Pressable>
+          </Pressable>
+        </Modal>
         <View style={styles.footer}>
           {loadingMore ? (
             <>
@@ -268,5 +361,39 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 280,
+    borderRadius: 16,
+    padding: 20,
+    gap: 12,
+  },
+  modalTitle: {
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  modalButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  modalButtonPrimary: {
+    backgroundColor: Colors.light?.tint ?? '#6366f1',
+  },
+  modalButtonPrimaryText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonText: {
+    fontSize: 16,
   },
 });

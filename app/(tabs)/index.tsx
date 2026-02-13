@@ -1,98 +1,186 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { Colors } from '@/constants/theme';
+import { useColorScheme } from '@/hooks/use-color-scheme';
+import { IconSymbol } from '@/components/ui/icon-symbol';
+import { useRouter } from 'expo-router';
+import { useCallback } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+const HEADER_TOP_PADDING = 20;
+const CARD_VERTICAL_PADDING = 24;
+
+type EntryItem = {
+  key: string;
+  title: string;
+  desc: string;
+  icon: 'iphone' | 'person.crop.circle';
+  href: '/(tabs)/mobile-wallpaper' | '/(tabs)/avatar-wallpaper';
+};
+
+const ENTRIES: EntryItem[] = [
+  {
+    key: 'mobile',
+    title: '手机壁纸',
+    desc: '按分类浏览，设为手机壁纸',
+    icon: 'iphone',
+    href: '/(tabs)/mobile-wallpaper',
+  },
+  {
+    key: 'avatar',
+    title: '头像壁纸',
+    desc: '精选头像，一键换装',
+    icon: 'person.crop.circle',
+    href: '/(tabs)/avatar-wallpaper',
+  },
+];
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome Violet Wallpaper App!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const insets = useSafeAreaInsets();
+  const colorScheme = useColorScheme();
+  const router = useRouter();
+  const topInset = insets.top + HEADER_TOP_PADDING;
+  const tintColor = Colors[colorScheme ?? 'light'].tint;
+  const isDark = colorScheme === 'dark';
+  const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const cardBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)';
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  const onEntryPress = useCallback(
+    (href: EntryItem['href']) => {
+      router.push(href as import('expo-router').Href);
+    },
+    [router],
+  );
+
+  return (
+    <ThemedView style={styles.container}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: topInset,
+            paddingBottom: 24 + (insets.bottom || 0),
+          },
+        ]}
+        contentInsetAdjustmentBehavior="automatic"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.hero}>
+          <ThemedText
+            type="title"
+            style={[styles.brandName, { color: tintColor }]}
+          >
+            Violet
+          </ThemedText>
+          <ThemedText style={styles.tagline}>
+            精选壁纸，随你换
+          </ThemedText>
+        </View>
+
+        <View style={styles.entries}>
+          {ENTRIES.map((entry) => (
+            <Pressable
+              key={entry.key}
+              onPress={() => onEntryPress(entry.href)}
+              style={({ pressed }) => [
+                styles.entryCard,
+                {
+                  backgroundColor: cardBg,
+                  borderColor: cardBorder,
+                  opacity: pressed ? 0.88 : 1,
+                },
+              ]}
+            >
+              <View style={[styles.entryIconWrap, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
+                <IconSymbol
+                  name={entry.icon}
+                  size={32}
+                  color={tintColor}
+                />
+              </View>
+              <View style={styles.entryBody}>
+                <ThemedText type="defaultSemiBold" style={styles.entryTitle}>
+                  {entry.title}
+                </ThemedText>
+                <ThemedText style={styles.entryDesc}>
+                  {entry.desc}
+                </ThemedText>
+              </View>
+              <IconSymbol
+                name="chevron.right"
+                size={20}
+                color={isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.35)'}
+              />
+            </Pressable>
+          ))}
+        </View>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+  },
+  hero: {
+    marginBottom: 32,
+    paddingVertical: 8,
+  },
+  brandName: {
+    fontSize: 36,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  tagline: {
+    fontSize: 16,
+    opacity: 0.72,
+    lineHeight: 22,
+  },
+  entries: {
+    gap: 14,
+  },
+  entryCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    paddingVertical: CARD_VERTICAL_PADDING,
+    paddingHorizontal: 18,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    gap: 16,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  entryIconWrap: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  entryBody: {
+    flex: 1,
+    gap: 4,
+  },
+  entryTitle: {
+    fontSize: 17,
+  },
+  entryDesc: {
+    fontSize: 13,
+    opacity: 0.7,
+    lineHeight: 18,
   },
 });
