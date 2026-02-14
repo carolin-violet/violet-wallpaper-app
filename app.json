@@ -73,6 +73,10 @@
                 {
                   "includeSubdomains": true,
                   "name": "10.0.2.2"
+                },
+                {
+                  "includeSubdomains": true,
+                  "name": "carolin-violet.cn"
                 }
               ]
             }
@@ -89,7 +93,7 @@
       "eas": {
         "projectId": "1bebdb56-e5d2-4511-8e88-ec54368f3557"
       },
-      "apiBaseUrl": "http://192.168.0.178:8203"
+      "apiBaseUrl": "http://wallpaper-backend.carolin-violet.cn:8000"
     }
   }
 }
