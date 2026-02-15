@@ -8,8 +8,8 @@ import {
 } from '@/src/api/controllers/pictures';
 import type { components } from '@/src/api/openapi-schema';
 import { File, Paths } from 'expo-file-system';
-import * as MediaLibrary from 'expo-media-library';
 import { Image } from 'expo-image';
+import * as MediaLibrary from 'expo-media-library';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -30,6 +30,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 const DEVICE_TYPE_AVATAR = 3;
 const PAGE_SIZE = 10;
 const HEADER_TOP_PADDING = 12;
+
+type FilterType = 'all' | 'featured';
 
 type PictureItem = components['schemas']['PictureResponseInfo'];
 
@@ -69,6 +71,8 @@ export default function AvatarWallpaperScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  /** 筛选：all=全部，featured=精华 */
+  const [filterType, setFilterType] = useState<FilterType>('all');
   /** 当前选中的图片，非空时显示操作弹窗 */
   const [selectedItem, setSelectedItem] = useState<PictureItem | null>(null);
   const [downloading, setDownloading] = useState(false);
@@ -112,33 +116,63 @@ export default function AvatarWallpaperScreen() {
     }
   }, [selectedItem]);
 
-  const fetchPage = useCallback(async (page: number, append: boolean) => {
-    if (page === 1) setLoading(true);
-    try {
-      const data = await listWallpapersApiPicturesListGet({
-        params: {
-          query: {
-            page_num: page,
-            page_size: PAGE_SIZE,
-            device_type: DEVICE_TYPE_AVATAR,
+  /**
+   * 拉取分页数据
+   * @param page 页码
+   * @param append 是否追加到现有列表
+   * @param nextFilter 当前要使用的筛选条件（用于切换时避免闭包时序问题）
+   */
+  const fetchPage = useCallback(
+    async (page: number, append: boolean, nextFilter: FilterType = filterType) => {
+      if (page === 1) setLoading(true);
+      try {
+        const data = await listWallpapersApiPicturesListGet({
+          params: {
+            query: {
+              page_num: page,
+              page_size: PAGE_SIZE,
+              device_type: DEVICE_TYPE_AVATAR,
+              ...(nextFilter === 'featured' ? { is_featured: 1 } : {}),
+            },
           },
-        },
-      } as unknown as Parameters<typeof listWallpapersApiPicturesListGet>[0]);
-      setTotal(data.total);
-      if (append) {
-        setRecords((prev) => [...prev, ...(data.records ?? [])]);
-      } else {
-        setRecords(data.records ?? []);
+        } as unknown as Parameters<typeof listWallpapersApiPicturesListGet>[0]);
+        setTotal(data.total);
+        if (append) {
+          setRecords((prev) => [...prev, ...(data.records ?? [])]);
+        } else {
+          setRecords(data.records ?? []);
+        }
+      } finally {
+        setLoading(false);
+        setLoadingMore(false);
       }
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
-  }, []);
+    },
+    [filterType],
+  );
 
   useEffect(() => {
+    setPageNum(1);
+    setRecords([]);
+    setTotal(0);
     fetchPage(1, false);
   }, [fetchPage]);
+
+  /**
+   * 切换筛选：重置列表与分页，并重新拉取第一页
+   * @param nextFilter 下一个筛选类型
+   */
+  const handleChangeFilter = useCallback(
+    (nextFilter: FilterType) => {
+      if (nextFilter === filterType) return;
+      setFilterType(nextFilter);
+      setPageNum(1);
+      setRecords([]);
+      setTotal(0);
+      setLoadingMore(false);
+      fetchPage(1, false, nextFilter);
+    },
+    [filterType, fetchPage],
+  );
 
   const loadMore = useCallback(() => {
     if (loadingMore || loading || !hasMore) return;
@@ -171,24 +205,6 @@ export default function AvatarWallpaperScreen() {
   const isDark = colorScheme === 'dark';
   const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
-  if (loading && records.length === 0) {
-    return (
-      <ThemedView style={[styles.centered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
-      </ThemedView>
-    );
-  }
-
-  if (!loading && records.length === 0) {
-    return (
-      <ThemedView style={[styles.centered, { paddingTop: insets.top }]}>
-        <ThemedText type="defaultSemiBold" style={styles.emptyText}>
-          暂无头像壁纸
-        </ThemedText>
-      </ThemedView>
-    );
-  }
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -211,56 +227,101 @@ export default function AvatarWallpaperScreen() {
         <ThemedText type="subtitle" style={styles.detailTitle}>
           头像壁纸
         </ThemedText>
-        <View style={[styles.row, { gap }]}>
-          <View style={styles.column}>
-            {left.map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() => setSelectedItem(item)}
-                style={[
-                  styles.card,
-                  {
-                    width: columnWidth,
-                    height: columnWidth * (item.height / item.width),
-                    backgroundColor: cardBg,
-                    marginBottom: gap,
-                  },
-                ]}
-              >
-                <Image
-                  source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  recyclingKey={String(item.id)}
-                />
-              </Pressable>
-            ))}
-          </View>
-          <View style={styles.column}>
-            {right.map((item) => (
-              <Pressable
-                key={item.id}
-                onPress={() => setSelectedItem(item)}
-                style={[
-                  styles.card,
-                  {
-                    width: columnWidth,
-                    height: columnWidth * (item.height / item.width),
-                    backgroundColor: cardBg,
-                    marginBottom: gap,
-                  },
-                ]}
-              >
-                <Image
-                  source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  recyclingKey={String(item.id)}
-                />
-              </Pressable>
-            ))}
-          </View>
+        <View style={[styles.filterRow, { backgroundColor: cardBg }]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterItem,
+              filterType === 'all' && styles.filterItemActive,
+              pressed && styles.filterItemPressed,
+            ]}
+            onPress={() => handleChangeFilter('all')}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={filterType === 'all' ? styles.filterTextActive : styles.filterText}
+            >
+              全部
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterItem,
+              filterType === 'featured' && styles.filterItemActive,
+              pressed && styles.filterItemPressed,
+            ]}
+            onPress={() => handleChangeFilter('featured')}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={filterType === 'featured' ? styles.filterTextActive : styles.filterText}
+            >
+              精华
+            </ThemedText>
+          </Pressable>
         </View>
+
+        {loading && records.length === 0 ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+          </View>
+        ) : records.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <ThemedText type="defaultSemiBold" style={styles.emptyText}>
+              {filterType === 'featured' ? '暂无精华头像壁纸' : '暂无头像壁纸'}
+            </ThemedText>
+          </View>
+        ) : (
+          <View style={[styles.row, { gap }]}>
+            <View style={styles.column}>
+              {left.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setSelectedItem(item)}
+                  style={[
+                    styles.card,
+                    {
+                      width: columnWidth,
+                      height: columnWidth * (item.height / item.width),
+                      backgroundColor: cardBg,
+                      marginBottom: gap,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    recyclingKey={String(item.id)}
+                  />
+                </Pressable>
+              ))}
+            </View>
+            <View style={styles.column}>
+              {right.map((item) => (
+                <Pressable
+                  key={item.id}
+                  onPress={() => setSelectedItem(item)}
+                  style={[
+                    styles.card,
+                    {
+                      width: columnWidth,
+                      height: columnWidth * (item.height / item.width),
+                      backgroundColor: cardBg,
+                      marginBottom: gap,
+                    },
+                  ]}
+                >
+                  <Image
+                    source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
+                    style={StyleSheet.absoluteFill}
+                    contentFit="cover"
+                    recyclingKey={String(item.id)}
+                  />
+                </Pressable>
+              ))}
+            </View>
+          </View>
+        )}
         <Modal
           visible={selectedItem !== null}
           transparent
@@ -276,7 +337,7 @@ export default function AvatarWallpaperScreen() {
                 styles.modalContent,
                 { backgroundColor: isDark ? Colors.dark.background : '#fff' },
               ]}
-              onPress={() => {}}
+              onPress={() => { }}
             >
               <ThemedText type="subtitle" style={styles.modalTitle}>
                 保存图片
@@ -311,18 +372,21 @@ export default function AvatarWallpaperScreen() {
             </Pressable>
           </Pressable>
         </Modal>
-        <View style={styles.footer}>
-          {loadingMore ? (
-            <>
-              <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
-              <ThemedText style={styles.footerHintText}>加载中…</ThemedText>
-            </>
-          ) : hasMore ? (
-            <ThemedText style={styles.footerHintText}>上拉加载更多</ThemedText>
-          ) : (
-            <ThemedText style={styles.footerHintText}>没有更多了</ThemedText>
-          )}
-        </View>
+
+        {records.length > 0 ? (
+          <View style={styles.footer}>
+            {loadingMore ? (
+              <>
+                <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
+                <ThemedText style={styles.footerHintText}>加载中…</ThemedText>
+              </>
+            ) : hasMore ? (
+              <ThemedText style={styles.footerHintText}>上拉加载更多</ThemedText>
+            ) : (
+              <ThemedText style={styles.footerHintText}>没有更多了</ThemedText>
+            )}
+          </View>
+        ) : null}
       </ScrollView>
     </ThemedView>
   );
@@ -341,6 +405,30 @@ const styles = StyleSheet.create({
   detailTitle: {
     marginBottom: 12,
   },
+  filterRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 12,
+  },
+  filterItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  filterItemActive: {
+    backgroundColor: 'rgba(99,102,241,0.18)',
+  },
+  filterItemPressed: {
+    opacity: 0.85,
+  },
+  filterText: {
+    opacity: 0.7,
+  },
+  filterTextActive: {
+    opacity: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -354,6 +442,18 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     opacity: 0.6,
+  },
+  loadingBox: {
+    paddingTop: 32,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    paddingTop: 32,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     paddingVertical: 20,

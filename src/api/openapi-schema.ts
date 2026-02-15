@@ -361,6 +361,12 @@ export interface components {
              * @description 审核状态：0=未审核，1=通过，2=未通过
              */
             status: number;
+            /**
+             * Is Featured
+             * @description 是否精选：0=否，1=是
+             * @default 0
+             */
+            is_featured: number;
         };
         /**
          * PictureUpdateRequest
@@ -372,6 +378,11 @@ export interface components {
              * @description 审核状态：0=未审核，1=通过，2=未通过
              */
             status?: number | null;
+            /**
+             * Is Featured
+             * @description 是否精选：0=否，1=是
+             */
+            is_featured?: number | null;
             /**
              * Category
              * @description 分类
@@ -481,6 +492,12 @@ export interface components {
              * @default 0
              */
             status: number;
+            /**
+             * Is Featured
+             * @description 是否精选：0=否，1=是
+             * @default 0
+             */
+            is_featured: number;
             /**
              * Category
              * @description 分类
@@ -744,6 +761,8 @@ export interface operations {
                 device_type?: number | null;
                 /** @description 审核状态：0=未审核，1=通过，2=未通过 */
                 status?: number | null;
+                /** @description 是否精选：0=否，1=是 */
+                is_featured?: number | null;
                 /** @description 分类 */
                 category?: string | null;
                 /** @description 标签列表 */

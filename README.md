@@ -209,17 +209,17 @@ pnpm exec expo run:android
 
       ```bash
       # Windows PowerShell
-      $env:EXPO_PUBLIC_API_BASE_URL="http://192.168.0.178:8203"
+      $env:API_BASE_URL="http://wallpaper-backend.carolin-violet.cn:8000/"
       cd android
       .\gradlew.bat assembleRelease
 
       # Windows CMD
-      set EXPO_PUBLIC_API_BASE_URL=http://192.168.0.178:8203
+      set API_BASE_URL=http://wallpaper-backend.carolin-violet.cn:8000/
       cd android
       .\gradlew.bat assembleRelease
 
       # macOS / Linux
-      EXPO_PUBLIC_API_BASE_URL=http://192.168.0.178:8203 ./gradlew assembleRelease
+      API_BASE_URL=http://wallpaper-backend.carolin-violet.cn:8000/ ./gradlew assembleRelease
       ```
 
       **排查方法**：安装 Release APK 后，用 `adb logcat | findstr "API Config"` 查看实际使用的 API 地址。如果显示 `http://127.0.0.1:8203`，说明配置未生效。

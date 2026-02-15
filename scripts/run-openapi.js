@@ -1,6 +1,6 @@
 /**
  * 加载 .env 后执行 openapi-typescript 与 generate-openapi-modules。
- * 解决 npm/pnpm 脚本中 EXPO_PUBLIC_API_BASE_URL 未展开的问题（尤其 Windows）。
+ * 解决 npm/pnpm 脚本中 API_BASE_URL 未展开的问题（尤其 Windows）。
  */
 const fs = require('fs');
 const path = require('path');
@@ -28,9 +28,9 @@ function loadEnvFile(filePath) {
 loadEnvFile('.env.development');
 loadEnvFile('.env');
 
-const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+const baseUrl = process.env.API_BASE_URL;
 if (!baseUrl) {
-  console.error('缺少 EXPO_PUBLIC_API_BASE_URL，请在 .env.development 或 .env 中配置');
+  console.error('缺少 API_BASE_URL，请在 .env.development 或 .env 中配置');
   process.exit(1);
 }
 
@@ -46,5 +46,5 @@ execSync(`npx openapi-typescript "${openapiUrl}" -o "${schemaOut}"`, {
 execSync('node ./scripts/generate-openapi-modules.js', {
   cwd: rootDir,
   stdio: 'inherit',
-  env: { ...process.env, EXPO_PUBLIC_API_BASE_URL: baseUrl },
+  env: { ...process.env, API_BASE_URL: baseUrl, OPENAPI_URL: openapiUrl },
 });

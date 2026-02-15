@@ -71,10 +71,10 @@ type ExtractRequestBody<
 }
   ? T
   : ApiOperation<P, M> extends {
-        requestBody: { content: { [contentType: string]: infer T } };
-      }
-    ? T
-    : undefined;
+    requestBody: { content: { [contentType: string]: infer T } };
+  }
+  ? T
+  : undefined;
 
 /**
  * 提取成功响应体类型（优先 200 / 201 / 204）
@@ -87,20 +87,20 @@ type ExtractResponseBody<
 }
   ? T
   : ApiOperation<P, M> extends {
-        responses: { 201: { content: { 'application/json': infer T } } };
-      }
-    ? T
-    : ApiOperation<P, M> extends {
-          responses: { 204: unknown };
-        }
-      ? void
-      : ApiOperation<P, M> extends {
-            responses: {
-              [status: string]: { content: { 'application/json': infer T } };
-            };
-          }
-        ? T
-        : unknown;
+    responses: { 201: { content: { 'application/json': infer T } } };
+  }
+  ? T
+  : ApiOperation<P, M> extends {
+    responses: { 204: unknown };
+  }
+  ? void
+  : ApiOperation<P, M> extends {
+    responses: {
+      [status: string]: { content: { 'application/json': infer T } };
+    };
+  }
+  ? T
+  : unknown;
 
 /**
  * 请求中的参数对象类型（路径 / 查询 / 头）
@@ -175,8 +175,8 @@ export interface ApiRequestConfig<
 /**
  * 默认后端基础地址，优先级：
  * 1. app.json 的 extra.apiBaseUrl（最可靠，会打包进 Release）
- * 2. 环境变量 EXPO_PUBLIC_API_BASE_URL（开发时）
- * 3. 默认值 http://192.168.0.178:8203
+ * 2. 环境变量 API_BASE_URL（开发时）
+ * 3. 默认值 http://wallpaper-backend.carolin-violet.cn:8000/
  */
 const getApiBaseUrl = (): string => {
   // 优先从 app.json 的 extra 读取（Release 包中可靠）
@@ -187,11 +187,11 @@ const getApiBaseUrl = (): string => {
   const fromEnv =
     typeof process !== 'undefined' &&
     (process as any).env &&
-    ((process as any).env.EXPO_PUBLIC_API_BASE_URL as string | undefined);
+    ((process as any).env.API_BASE_URL as string | undefined);
   if (fromEnv) return fromEnv;
 
   // 默认值
-  return 'http://192.168.0.178:8203';
+  return 'http://wallpaper-backend.carolin-violet.cn:8000/';
 };
 
 const DEFAULT_API_BASE_URL = getApiBaseUrl();
@@ -200,7 +200,7 @@ const DEFAULT_API_BASE_URL = getApiBaseUrl();
 if (typeof console !== 'undefined') {
   console.log('[API Config] DEFAULT_API_BASE_URL:', DEFAULT_API_BASE_URL);
   console.log('[API Config] from extra.apiBaseUrl:', Constants.expoConfig?.extra?.apiBaseUrl);
-  console.log('[API Config] from env:', (process as any).env?.EXPO_PUBLIC_API_BASE_URL);
+  console.log('[API Config] from env:', (process as any).env?.API_BASE_URL);
 }
 
 /**
@@ -355,8 +355,7 @@ export async function apiRequest<
     const errorText = await response.text().catch(() => '');
     console.error('[API Error]', response.status, errorText || response.statusText);
     throw new Error(
-      `请求失败: ${response.status} ${response.statusText}${
-        errorText ? ` - ${errorText}` : ''
+      `请求失败: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''
       }`,
     );
   }

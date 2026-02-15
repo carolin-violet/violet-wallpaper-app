@@ -29,7 +29,11 @@ function getOpenApiUrl() {
   if (envUrl && typeof envUrl === 'string') {
     return envUrl;
   }
-  return process.env.EXPO_PUBLIC_API_BASE_URL + '/openapi.json';
+  const baseUrl = process.env.API_BASE_URL;
+  if (!baseUrl || typeof baseUrl !== 'string') {
+    return 'http://127.0.0.1:8203/openapi.json';
+  }
+  return baseUrl.replace(/\/+$/, '') + '/openapi.json';
 }
 
 /**
@@ -209,8 +213,21 @@ async function main() {
   const response = await fetch(openApiUrl);
 
   if (!response.ok) {
+    let responseText = '';
+    try {
+      responseText = await response.text();
+    } catch {
+      responseText = '';
+    }
+
+    const snippet = responseText
+      ? responseText.slice(0, 300).replace(/\s+/g, ' ').trim()
+      : '';
+
     throw new Error(
-      `获取 OpenAPI 文档失败：${response.status} ${response.statusText}`,
+      `获取 OpenAPI 文档失败：${response.status} ${response.statusText}\n` +
+        `请求地址：${openApiUrl}` +
+        (snippet ? `\n响应片段：${snippet}` : ''),
     );
   }
 

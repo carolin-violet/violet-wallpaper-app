@@ -31,6 +31,8 @@ const PAGE_SIZE = 10;
 /** 安全区之上再留出的标题区高度 */
 const HEADER_TOP_PADDING = 12;
 
+type FilterType = 'all' | 'featured';
+
 type PictureItem = components['schemas']['PictureResponseInfo'];
 
 /** 将列表按高度分配到两列，使两列总高度尽量接近（瀑布流） */
@@ -80,6 +82,8 @@ export default function MobileWallpaperDetailScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  /** 筛选：all=全部，featured=精华 */
+  const [filterType, setFilterType] = useState<FilterType>('all');
   /** 当前选中要操作的图片，非空时显示操作弹层 */
   const [selectedItem, setSelectedItem] = useState<PictureItem | null>(null);
 
@@ -130,8 +134,14 @@ export default function MobileWallpaperDetailScreen() {
     [],
   );
 
+  /**
+   * 拉取分页数据
+   * @param page 页码
+   * @param append 是否追加到现有列表
+   * @param nextFilter 当前要使用的筛选条件（用于切换时避免闭包时序问题）
+   */
   const fetchPage = useCallback(
-    async (page: number, append: boolean) => {
+    async (page: number, append: boolean, nextFilter: FilterType = filterType) => {
       if (page === 1) setLoading(true);
       try {
         const data = await listWallpapersApiPicturesListGet({
@@ -141,6 +151,7 @@ export default function MobileWallpaperDetailScreen() {
               page_size: PAGE_SIZE,
               device_type: DEVICE_TYPE_PHONE,
               ...(categoryCode ? { category: categoryCode } : {}),
+              ...(nextFilter === 'featured' ? { is_featured: 1 } : {}),
             },
           },
         } as unknown as Parameters<typeof listWallpapersApiPicturesListGet>[0]);
@@ -155,7 +166,7 @@ export default function MobileWallpaperDetailScreen() {
         setLoadingMore(false);
       }
     },
-    [categoryCode],
+    [categoryCode, filterType],
   );
 
   useEffect(() => {
@@ -164,6 +175,23 @@ export default function MobileWallpaperDetailScreen() {
     setTotal(0);
     fetchPage(1, false);
   }, [fetchPage]);
+
+  /**
+   * 切换筛选：重置列表与分页，并重新拉取第一页
+   * @param nextFilter 下一个筛选类型
+   */
+  const handleChangeFilter = useCallback(
+    (nextFilter: FilterType) => {
+      if (nextFilter === filterType) return;
+      setFilterType(nextFilter);
+      setPageNum(1);
+      setRecords([]);
+      setTotal(0);
+      setLoadingMore(false);
+      fetchPage(1, false, nextFilter);
+    },
+    [filterType, fetchPage],
+  );
 
   const loadMore = useCallback(() => {
     if (loadingMore || loading || !hasMore) return;
@@ -196,31 +224,6 @@ export default function MobileWallpaperDetailScreen() {
   const isDark = colorScheme === 'dark';
   const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
-  if (loading && records.length === 0) {
-    return (
-      <ThemedView style={[styles.centered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
-      </ThemedView>
-    );
-  }
-
-  if (!loading && records.length === 0) {
-    return (
-      <ThemedView style={[styles.centered, { paddingTop: insets.top }]}>
-        <ThemedText type="defaultSemiBold" style={styles.emptyText}>
-          {categoryCode ? `该分类暂无壁纸` : '暂无手机壁纸'}
-        </ThemedText>
-        <ThemedText
-          type="link"
-          style={styles.backLink}
-          onPress={() => router.back()}
-        >
-          返回分类
-        </ThemedText>
-      </ThemedView>
-    );
-  }
-
   return (
     <ThemedView style={styles.container}>
       <ScrollView
@@ -243,68 +246,130 @@ export default function MobileWallpaperDetailScreen() {
         <ThemedText type="subtitle" style={styles.detailTitle}>
           {categoryTitle}
         </ThemedText>
-        <View style={[styles.row, { gap }]}>
-          <View style={styles.column}>
-            {left.map((item) => (
-              <Pressable
-                key={item.id}
-                style={[
-                  styles.card,
-                  {
-                    width: columnWidth,
-                    height: columnWidth * (item.height / item.width),
-                    backgroundColor: cardBg,
-                    marginBottom: gap,
-                  },
-                ]}
-                onPress={() => setSelectedItem(item)}
-              >
-                <Image
-                  source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  recyclingKey={String(item.id)}
-                />
-              </Pressable>
-            ))}
-          </View>
-          <View style={styles.column}>
-            {right.map((item) => (
-              <Pressable
-                key={item.id}
-                style={[
-                  styles.card,
-                  {
-                    width: columnWidth,
-                    height: columnWidth * (item.height / item.width),
-                    backgroundColor: cardBg,
-                    marginBottom: gap,
-                  },
-                ]}
-                onPress={() => setSelectedItem(item)}
-              >
-                <Image
-                  source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
-                  style={StyleSheet.absoluteFill}
-                  contentFit="cover"
-                  recyclingKey={String(item.id)}
-                />
-              </Pressable>
-            ))}
-          </View>
+        <View style={[styles.filterRow, { backgroundColor: cardBg }]}
+        >
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterItem,
+              filterType === 'all' && styles.filterItemActive,
+              pressed && styles.filterItemPressed,
+            ]}
+            onPress={() => handleChangeFilter('all')}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={filterType === 'all' ? styles.filterTextActive : styles.filterText}
+            >
+              全部
+            </ThemedText>
+          </Pressable>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterItem,
+              filterType === 'featured' && styles.filterItemActive,
+              pressed && styles.filterItemPressed,
+            ]}
+            onPress={() => handleChangeFilter('featured')}
+          >
+            <ThemedText
+              type="defaultSemiBold"
+              style={filterType === 'featured' ? styles.filterTextActive : styles.filterText}
+            >
+              精华
+            </ThemedText>
+          </Pressable>
         </View>
-        <View style={styles.footer}>
-          {loadingMore ? (
-            <>
-              <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
-              <ThemedText style={styles.footerHintText}>加载中…</ThemedText>
-            </>
-          ) : hasMore ? (
-            <ThemedText style={styles.footerHintText}>上拉加载更多</ThemedText>
-          ) : (
-            <ThemedText style={styles.footerHintText}>没有更多了</ThemedText>
-          )}
-        </View>
+
+        {loading && records.length === 0 ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+          </View>
+        ) : records.length === 0 ? (
+          <View style={styles.emptyBox}>
+            <ThemedText type="defaultSemiBold" style={styles.emptyText}>
+              {filterType === 'featured'
+                ? categoryCode
+                  ? '该分类暂无精华壁纸'
+                  : '暂无精华手机壁纸'
+                : categoryCode
+                  ? '该分类暂无壁纸'
+                  : '暂无手机壁纸'}
+            </ThemedText>
+            <ThemedText
+              type="link"
+              style={styles.backLink}
+              onPress={() => router.back()}
+            >
+              返回分类
+            </ThemedText>
+          </View>
+        ) : (
+          <>
+            <View style={[styles.row, { gap }]}
+            >
+              <View style={styles.column}>
+                {left.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={[
+                      styles.card,
+                      {
+                        width: columnWidth,
+                        height: columnWidth * (item.height / item.width),
+                        backgroundColor: cardBg,
+                        marginBottom: gap,
+                      },
+                    ]}
+                    onPress={() => setSelectedItem(item)}
+                  >
+                    <Image
+                      source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      recyclingKey={String(item.id)}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+              <View style={styles.column}>
+                {right.map((item) => (
+                  <Pressable
+                    key={item.id}
+                    style={[
+                      styles.card,
+                      {
+                        width: columnWidth,
+                        height: columnWidth * (item.height / item.width),
+                        backgroundColor: cardBg,
+                        marginBottom: gap,
+                      },
+                    ]}
+                    onPress={() => setSelectedItem(item)}
+                  >
+                    <Image
+                      source={imageUri(item) ? { uri: imageUri(item)! } : undefined}
+                      style={StyleSheet.absoluteFill}
+                      contentFit="cover"
+                      recyclingKey={String(item.id)}
+                    />
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            <View style={styles.footer}>
+              {loadingMore ? (
+                <>
+                  <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
+                  <ThemedText style={styles.footerHintText}>加载中…</ThemedText>
+                </>
+              ) : hasMore ? (
+                <ThemedText style={styles.footerHintText}>上拉加载更多</ThemedText>
+              ) : (
+                <ThemedText style={styles.footerHintText}>没有更多了</ThemedText>
+              )}
+            </View>
+          </>
+        )}
       </ScrollView>
 
       {/* 图片操作弹层：应用于壁纸 / 锁屏 / 同时应用 */}
@@ -389,6 +454,30 @@ const styles = StyleSheet.create({
   detailTitle: {
     marginBottom: 12,
   },
+  filterRow: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    borderRadius: 999,
+    padding: 4,
+    marginBottom: 12,
+  },
+  filterItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+  },
+  filterItemActive: {
+    backgroundColor: 'rgba(99,102,241,0.18)',
+  },
+  filterItemPressed: {
+    opacity: 0.85,
+  },
+  filterText: {
+    opacity: 0.7,
+  },
+  filterTextActive: {
+    opacity: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -405,6 +494,18 @@ const styles = StyleSheet.create({
   },
   backLink: {
     marginTop: 12,
+  },
+  loadingBox: {
+    paddingTop: 32,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyBox: {
+    paddingTop: 32,
+    paddingBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   footer: {
     paddingVertical: 20,
