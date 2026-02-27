@@ -160,10 +160,10 @@ pnpm exec expo run:android
 
    **Debug 与 Release 包的区别：**
 
-   | 类型 | 命令 | JS 打包 | 依赖 Metro | 用途 |
-   |------|------|---------|-----------|------|
-   | **Debug** | `assembleDebug` | ❌ 不打包，需从开发服务器加载 | ✅ 需要电脑运行 `expo start` | 开发调试，需与电脑同一 WiFi |
-   | **Release** | `assembleRelease` | ✅ JS 打包进 APK | ❌ 可独立运行 | 分发测试、正式发布 |
+   | 类型        | 命令              | JS 打包                       | 依赖 Metro                   | 用途                        |
+   | ----------- | ----------------- | ----------------------------- | ---------------------------- | --------------------------- |
+   | **Debug**   | `assembleDebug`   | ❌ 不打包，需从开发服务器加载 | ✅ 需要电脑运行 `expo start` | 开发调试，需与电脑同一 WiFi |
+   | **Release** | `assembleRelease` | ✅ JS 打包进 APK              | ❌ 可独立运行                | 分发测试、正式发布          |
 
    **打 Release 包（独立运行，不依赖 Metro）：**
 
@@ -190,7 +190,6 @@ pnpm exec expo run:android
    > **注意**：Release 包需要配置签名（`android/app/build.gradle` 中的 `signingConfig`），否则可能无法安装或无法上架。未配置时，可先用 Debug 包测试功能，正式发布时使用 EAS Build。
 
    **⚠️ Release 包接口不通的常见问题：**
-
    1. **API 地址未被打包（最常见）**：
 
       **方案 A：使用 `app.json` 配置（推荐，已配置）**
@@ -209,17 +208,17 @@ pnpm exec expo run:android
 
       ```bash
       # Windows PowerShell
-      $env:API_BASE_URL="http://wallpaper-backend.carolin-violet.cn:8000/"
+      $env:API_BASE_URL="YOUR-BACKEND-API"
       cd android
       .\gradlew.bat assembleRelease
 
       # Windows CMD
-      set API_BASE_URL=http://wallpaper-backend.carolin-violet.cn:8000/
+      set API_BASE_URL=YOUR-BACKEND-API
       cd android
       .\gradlew.bat assembleRelease
 
       # macOS / Linux
-      API_BASE_URL=http://wallpaper-backend.carolin-violet.cn:8000/ ./gradlew assembleRelease
+      API_BASE_URL=YOUR-BACKEND-API ./gradlew assembleRelease
       ```
 
       **排查方法**：安装 Release APK 后，用 `adb logcat | findstr "API Config"` 查看实际使用的 API 地址。如果显示 `http://127.0.0.1:8203`，说明配置未生效。
@@ -234,7 +233,7 @@ pnpm exec expo run:android
       {
         "expo": {
           "android": {
-            "usesCleartextTraffic": true,
+            "usesCleartextTraffic": true
             // ... 其他配置
           }
         }
@@ -244,7 +243,6 @@ pnpm exec expo run:android
       然后重新执行 `expo prebuild`，Expo 会自动生成网络安全配置。
 
       **方式 B：手动创建文件（如果已 prebuild，不想改 app.json）**
-
       1. 创建文件 `android/app/src/main/res/xml/network_security_config.xml`（如果 `res/xml/` 目录不存在，需要先创建）：
 
          ```xml
