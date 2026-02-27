@@ -3,8 +3,8 @@
  * 提供带完整类型推导的请求方法。
  */
 
-import Constants from 'expo-constants';
-import type { paths } from './openapi-schema';
+import Constants from "expo-constants";
+import type { paths } from "./openapi-schema";
 
 /**
  * API 所有路径类型
@@ -27,80 +27,70 @@ export type ApiOperation<
 /**
  * 提取路径参数类型
  */
-type ExtractPathParams<
-  P extends ApiPaths,
-  M extends ApiMethodForPath<P>,
-> = ApiOperation<P, M> extends {
-  parameters: { path: infer T };
-}
-  ? T
-  : undefined;
+type ExtractPathParams<P extends ApiPaths, M extends ApiMethodForPath<P>> =
+  ApiOperation<P, M> extends {
+    parameters: { path: infer T };
+  }
+    ? T
+    : undefined;
 
 /**
  * 提取查询参数类型
  */
-type ExtractQueryParams<
-  P extends ApiPaths,
-  M extends ApiMethodForPath<P>,
-> = ApiOperation<P, M> extends {
-  parameters: { query: infer T };
-}
-  ? T
-  : undefined;
+type ExtractQueryParams<P extends ApiPaths, M extends ApiMethodForPath<P>> =
+  ApiOperation<P, M> extends {
+    parameters: { query: infer T };
+  }
+    ? T
+    : undefined;
 
 /**
  * 提取 Header 参数类型
  */
-type ExtractHeaderParams<
-  P extends ApiPaths,
-  M extends ApiMethodForPath<P>,
-> = ApiOperation<P, M> extends {
-  parameters: { header: infer T };
-}
-  ? T
-  : undefined;
+type ExtractHeaderParams<P extends ApiPaths, M extends ApiMethodForPath<P>> =
+  ApiOperation<P, M> extends {
+    parameters: { header: infer T };
+  }
+    ? T
+    : undefined;
 
 /**
  * 提取请求 Body 类型（优先 application/json）
  */
-type ExtractRequestBody<
-  P extends ApiPaths,
-  M extends ApiMethodForPath<P>,
-> = ApiOperation<P, M> extends {
-  requestBody: { content: { 'application/json': infer T } };
-}
-  ? T
-  : ApiOperation<P, M> extends {
-    requestBody: { content: { [contentType: string]: infer T } };
+type ExtractRequestBody<P extends ApiPaths, M extends ApiMethodForPath<P>> =
+  ApiOperation<P, M> extends {
+    requestBody: { content: { "application/json": infer T } };
   }
-  ? T
-  : undefined;
+    ? T
+    : ApiOperation<P, M> extends {
+          requestBody: { content: { [contentType: string]: infer T } };
+        }
+      ? T
+      : undefined;
 
 /**
  * 提取成功响应体类型（优先 200 / 201 / 204）
  */
-type ExtractResponseBody<
-  P extends ApiPaths,
-  M extends ApiMethodForPath<P>,
-> = ApiOperation<P, M> extends {
-  responses: { 200: { content: { 'application/json': infer T } } };
-}
-  ? T
-  : ApiOperation<P, M> extends {
-    responses: { 201: { content: { 'application/json': infer T } } };
+type ExtractResponseBody<P extends ApiPaths, M extends ApiMethodForPath<P>> =
+  ApiOperation<P, M> extends {
+    responses: { 200: { content: { "application/json": infer T } } };
   }
-  ? T
-  : ApiOperation<P, M> extends {
-    responses: { 204: unknown };
-  }
-  ? void
-  : ApiOperation<P, M> extends {
-    responses: {
-      [status: string]: { content: { 'application/json': infer T } };
-    };
-  }
-  ? T
-  : unknown;
+    ? T
+    : ApiOperation<P, M> extends {
+          responses: { 201: { content: { "application/json": infer T } } };
+        }
+      ? T
+      : ApiOperation<P, M> extends {
+            responses: { 204: unknown };
+          }
+        ? void
+        : ApiOperation<P, M> extends {
+              responses: {
+                [status: string]: { content: { "application/json": infer T } };
+              };
+            }
+          ? T
+          : unknown;
 
 /**
  * 请求中的参数对象类型（路径 / 查询 / 头）
@@ -169,38 +159,43 @@ export interface ApiRequestConfig<
   /**
    * 透传给 fetch 的额外配置（不包含 method / body）
    */
-  init?: Omit<RequestInit, 'method' | 'body'>;
+  init?: Omit<RequestInit, "method" | "body">;
 }
 
 /**
  * 默认后端基础地址，优先级：
  * 1. app.json 的 extra.apiBaseUrl（最可靠，会打包进 Release）
  * 2. 环境变量 API_BASE_URL（开发时）
- * 3. 默认值 http://wallpaper-backend.carolin-violet.cn:8000/
+ * 3. 默认值 YOUR-BACKEND-API
  */
 const getApiBaseUrl = (): string => {
   // 优先从 app.json 的 extra 读取（Release 包中可靠）
-  const fromExtra = Constants.expoConfig?.extra?.apiBaseUrl as string | undefined;
+  const fromExtra = Constants.expoConfig?.extra?.apiBaseUrl as
+    | string
+    | undefined;
   if (fromExtra) return fromExtra;
 
   // 其次从环境变量读取（开发时）
   const fromEnv =
-    typeof process !== 'undefined' &&
+    typeof process !== "undefined" &&
     (process as any).env &&
     ((process as any).env.API_BASE_URL as string | undefined);
   if (fromEnv) return fromEnv;
 
   // 默认值
-  return 'http://wallpaper-backend.carolin-violet.cn:8000/';
+  return "YOUR-BACKEND-API";
 };
 
 const DEFAULT_API_BASE_URL = getApiBaseUrl();
 
 // 调试：输出实际使用的 API 地址（Release 包中也会输出，便于排查）
-if (typeof console !== 'undefined') {
-  console.log('[API Config] DEFAULT_API_BASE_URL:', DEFAULT_API_BASE_URL);
-  console.log('[API Config] from extra.apiBaseUrl:', Constants.expoConfig?.extra?.apiBaseUrl);
-  console.log('[API Config] from env:', (process as any).env?.API_BASE_URL);
+if (typeof console !== "undefined") {
+  console.log("[API Config] DEFAULT_API_BASE_URL:", DEFAULT_API_BASE_URL);
+  console.log(
+    "[API Config] from extra.apiBaseUrl:",
+    Constants.expoConfig?.extra?.apiBaseUrl,
+  );
+  console.log("[API Config] from env:", (process as any).env?.API_BASE_URL);
 }
 
 /**
@@ -227,10 +222,8 @@ function buildPath(
  * 构建查询字符串
  * @param query 查询参数对象
  */
-function buildQueryString(
-  query?: Record<string, unknown> | undefined,
-): string {
-  if (!query) return '';
+function buildQueryString(query?: Record<string, unknown> | undefined): string {
+  if (!query) return "";
 
   const searchParams = new URLSearchParams();
 
@@ -251,7 +244,7 @@ function buildQueryString(
   });
 
   const qs = searchParams.toString();
-  return qs ? `?${qs}` : '';
+  return qs ? `?${qs}` : "";
 }
 
 /**
@@ -290,7 +283,7 @@ export async function apiRequest<
     init,
   } = config;
 
-  const base = baseUrl.replace(/\/+$/, '');
+  const base = baseUrl.replace(/\/+$/, "");
   const rawPath = String(path);
 
   const finalPath = buildPath(
@@ -317,18 +310,15 @@ export async function apiRequest<
   if (body !== undefined && body !== null) {
     if (
       // FormData / Blob / ArrayBuffer 等不再进行 JSON 序列化
-      typeof FormData !== 'undefined' &&
+      typeof FormData !== "undefined" &&
       body instanceof FormData
     ) {
       requestBody = body as unknown as BodyInit;
-    } else if (
-      typeof Blob !== 'undefined' &&
-      body instanceof Blob
-    ) {
+    } else if (typeof Blob !== "undefined" && body instanceof Blob) {
       requestBody = body as unknown as BodyInit;
     } else {
-      if (!headers.has('Content-Type')) {
-        headers.set('Content-Type', 'application/json');
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
       }
       requestBody = JSON.stringify(body);
     }
@@ -344,18 +334,25 @@ export async function apiRequest<
     });
   } catch (networkError) {
     const msg =
-      networkError instanceof Error ? networkError.message : String(networkError);
-    console.error('[API Network Error]', url, msg);
+      networkError instanceof Error
+        ? networkError.message
+        : String(networkError);
+    console.error("[API Network Error]", url, msg);
     throw networkError;
   }
 
   console.log(`[API Response] ${response.status} ${url}`);
 
   if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    console.error('[API Error]', response.status, errorText || response.statusText);
+    const errorText = await response.text().catch(() => "");
+    console.error(
+      "[API Error]",
+      response.status,
+      errorText || response.statusText,
+    );
     throw new Error(
-      `请求失败: ${response.status} ${response.statusText}${errorText ? ` - ${errorText}` : ''
+      `请求失败: ${response.status} ${response.statusText}${
+        errorText ? ` - ${errorText}` : ""
       }`,
     );
   }
@@ -373,4 +370,3 @@ export async function apiRequest<
     return undefined as ApiResponse<P, M>;
   }
 }
-
