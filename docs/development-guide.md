@@ -1,0 +1,288 @@
+## 开发与构建指南（扩展文档）
+
+本文档收录了 README 中不适合放在“快速上手入口”的扩展内容，包括路由结构说明、依赖一致性检查、EAS 打包发布、本地构建 APK、项目结构说明等。
+
+---
+
+## 应用结构与路由
+
+应用使用 `expo-router` + 原生 Tab 导航（`app/(tabs)/_layout.tsx`）组织页面：
+
+- **底部 Tab**
+  - **首页 (`app/(tabs)/index.tsx`)**
+    - 欢迎页与示例组件（`ParallaxScrollView`、`HelloWave` 等）
+    - 推荐入口、开发提示（如何重置模板、如何打开 DevTools）
+  - **手机壁纸 (`app/(tabs)/mobile-wallpaper.tsx`)**
+    - 用于展示手机纵向壁纸列表（可扩展为网络数据 / 本地资源）
+  - **头像壁纸 (`app/(tabs)/avatar-wallpaper.tsx`)**
+    - 用于展示头像 / 方形壁纸列表（可扩展为分类、搜索、收藏等）
+
+- **根布局**
+  - `app/_layout.tsx`：配置 `ThemeProvider`、栈导航与全局 `StatusBar`
+  - 通过 `unstable_settings.anchor = '(tabs)'` 将 Tab 作为根锚点
+
+> 推荐在实现业务前，先运行 `pnpm run reset-project`（或对应脚本）清理模板代码，再按实际业务重构 `app/(tabs)` 目录。
+
+---
+
+## 依赖与 SDK 一致性检查
+
+项目使用 Expo SDK 54，并在 `package.json` 中预置了常用检查脚本，建议在安装或升级依赖后执行一次：
+
+| 命令                     | 说明                                                              |
+| ------------------------ | ----------------------------------------------------------------- |
+| `pnpm run doctor`        | 运行 `expo-doctor`，检查依赖版本、锁文件、配置是否与当前 SDK 匹配 |
+| `pnpm run install:check` | 运行 `expo install --check`，仅检查各包版本是否符合 SDK 推荐版本  |
+
+如果 `expo-doctor` 报依赖版本不匹配，可使用：
+
+```bash
+npx expo install --fix
+```
+
+根据 Expo SDK 推荐版本自动修正依赖。
+
+---
+
+## 打包与发布（EAS Build）
+
+构建前请先登录 EAS：
+
+```bash
+eas login
+```
+
+`eas.json` 中已配置基于 Node `22.21.1` 与 pnpm `9.15.0` 的统一构建基线：
+
+| Profile     | 命令                                                 | 平台    | 输出格式 | 用途                |
+| ----------- | ---------------------------------------------------- | ------- | -------- | ------------------- |
+| development | `eas build --platform android --profile development` | Android | 内部调试 | 开发客户端 / 内测   |
+| preview     | `eas build --platform android --profile preview`     | Android | AAB      | 预发布 / 内部发布   |
+| production  | `eas build --platform android --profile production`  | Android | AAB      | 上架 Google Play    |
+| preview-apk | `eas build --platform android --profile preview-apk` | Android | APK      | 线下内测 / 直接安装 |
+
+- `production` / `preview-apk` Profile 中会注入 `APP_ENV=production`。
+- 构建时通常配合 `.env.production` 使用，按需在其中配置 API 域名、埋点等运行时常量。
+- 使用 EAS 云端构建时，**建议开启梯子并启用 tun 模式**，否则可能因网络受限导致构建失败或极慢。
+
+### EAS 中使用 pnpm
+
+本项目在 `eas.json` 的 `build.base` 中显式指定了 pnpm 版本，EAS 云端会使用 pnpm 安装依赖：
+
+- 仓库中 **只保留 `pnpm-lock.yaml`**；
+- 如果存在历史遗留的 `package-lock.json`，请删除后提交一次，否则 EAS 可能 fallback 到 npm；
+- 本地开发也建议统一使用 pnpm，避免依赖树不一致。
+
+> 如果只需要一个用于本地安装调试的 APK，而不想依赖 EAS，可参考下文「本地构建可安装 APK」章节。
+
+---
+
+## 本地构建可安装 APK（不依赖 EAS）
+
+在联网受限或仅需要一个调试用 APK 文件时，可以通过 **prebuild + Gradle** 在本机直接构建 APK，而不走 EAS 云端。
+
+### 方式一：`expo run:android` 一键构建并安装
+
+适合日常开发联调：
+
+```bash
+pnpm exec expo run:android
+```
+
+- 首次运行会自动执行 `expo prebuild` 生成 `android/` 原生工程；
+- 然后使用 Gradle 构建一个 **debug 开发包**，并自动安装、启动到已连接的设备 / 模拟器；
+- 这一方式的目标是「跑起来」，APK 文件仍然会生成在 `android/app/build/outputs/apk/debug/`，但不会特别提示。
+
+如果自动启动模拟器超时，可以先手动打开 AVD，或改用下面的方式二。
+
+### 方式二：手动 prebuild + Gradle 打 Debug APK (推荐)
+
+当你明确希望拿到一个 **可拷贝 / 可分发的调试 APK 文件** 时，推荐使用此方式。
+
+1. **生成原生 Android 工程（如已存在 `android/` 可视情况跳过）**
+
+   ```bash
+   pnpm exec expo prebuild --platform android
+   # 或
+   npx expo prebuild --platform android
+   ```
+
+   - 成功后，项目根目录会出现一个 `android/` 目录；
+   - 若修改了 `app.json` / Expo 配置，需重新执行以同步到原生工程。
+
+2. **进入 `android/` 目录，用 Gradle 打 Debug 包**
+
+   在 Windows（PowerShell / CMD）中：
+
+   ```bash
+   cd android
+   .\gradlew.bat assembleDebug
+   ```
+
+   在 macOS / Linux 中：
+
+   ```bash
+   cd android
+   ./gradlew assembleDebug
+   ```
+
+   **Debug 与 Release 包的区别：**
+
+   | 类型        | 命令              | JS 打包                       | 依赖 Metro                   | 用途                        |
+   | ----------- | ----------------- | ----------------------------- | ---------------------------- | --------------------------- |
+   | **Debug**   | `assembleDebug`   | ❌ 不打包，需从开发服务器加载 | ✅ 需要电脑运行 `expo start` | 开发调试，需与电脑同一 WiFi |
+   | **Release** | `assembleRelease` | ✅ JS 打包进 APK              | ❌ 可独立运行                | 分发测试、正式发布          |
+
+   **打 Release 包（独立运行，不依赖 Metro）：**
+
+   在 Windows（PowerShell / CMD）中：
+
+   ```bash
+   cd android
+   .\gradlew.bat assembleRelease
+   ```
+
+   在 macOS / Linux 中：
+
+   ```bash
+   cd android
+   ./gradlew assembleRelease
+   ```
+
+   Release APK 输出路径：
+
+   ```text
+   android/app/build/outputs/apk/release/app-release.apk
+   ```
+
+   > **注意**：Release 包需要配置签名（`android/app/build.gradle` 中的 `signingConfig`），否则可能无法安装或无法上架。未配置时，可先用 Debug 包测试功能，正式发布时使用 EAS Build。
+
+   **⚠️ Release 包接口不通的常见问题：**
+   1. **API 地址未被打包（最常见）**：
+
+      **方案 A：使用 `app.json` 配置（推荐，已配置）**
+
+      已在 `app.json` 的 `extra.apiBaseUrl` 中配置了 API 地址，代码会优先从这里读取。修改 `app.json` 后需要重新 prebuild：
+
+      ```bash
+      npx expo prebuild --platform android --clean
+      cd android
+      .\gradlew.bat assembleRelease
+      ```
+
+      **方案 B：使用环境变量（需在构建时设置）**
+
+      如果使用环境变量，确保在构建前设置：
+
+      ```bash
+      # Windows PowerShell
+      $env:API_BASE_URL="YOUR-BACKEND-API"
+      cd android
+      .\gradlew.bat assembleRelease
+
+      # Windows CMD
+      set API_BASE_URL=YOUR-BACKEND-API
+      cd android
+      .\gradlew.bat assembleRelease
+
+      # macOS / Linux
+      API_BASE_URL=YOUR-BACKEND-API ./gradlew assembleRelease
+      ```
+
+      **排查方法**：安装 Release APK 后，用 `adb logcat | findstr "API Config"` 查看实际使用的 API 地址。如果显示 `http://127.0.0.1:8203`，说明配置未生效。
+
+   2. **Android 9+ 阻止 HTTP 请求**：如果 API 使用 `http://`（非 HTTPS），需要配置允许 HTTP。有两种方式：
+
+      **方式 A：在 `app.json` 中配置（推荐，自动生成）**
+
+      在 `app.json` 的 `expo.android` 中添加 `usesCleartextTraffic: true`：
+
+      ```json
+      {
+        "expo": {
+          "android": {
+            "usesCleartextTraffic": true
+            // ... 其他配置
+          }
+        }
+      }
+      ```
+
+      然后重新执行 `expo prebuild`，Expo 会自动生成网络安全配置。
+
+      **方式 B：手动创建文件（如果已 prebuild，不想改 app.json）**
+      1. 创建文件 `android/app/src/main/res/xml/network_security_config.xml`（如果 `res/xml/` 目录不存在，需要先创建）：
+
+         ```xml
+         <?xml version="1.0" encoding="utf-8"?>
+         <network-security-config>
+           <base-config cleartextTrafficPermitted="true">
+             <trust-anchors>
+               <certificates src="system" />
+             </trust-anchors>
+           </base-config>
+         </network-security-config>
+         ```
+
+      2. 在 `android/app/src/main/AndroidManifest.xml` 的 `<application>` 标签中添加：
+
+         ```xml
+         android:networkSecurityConfig="@xml/network_security_config"
+         ```
+
+   3. **网络可达性**：确保手机和服务器在同一 WiFi，或使用公网可访问的服务器地址。
+
+   构建成功后，控制台会输出 `BUILD SUCCESSFUL`。
+
+需要注意: 本地构建时，**建议开启梯子并启用 tun 模式**，否则可能因网络受限导致gradle构建失败。
+
+3. **查找并安装 APK**
+
+   默认输出路径为：
+
+   ```text
+   android/app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+   - 这是一个 **debug 签名的 APK**，可以直接拷贝到手机安装；
+   - 也可以使用 ADB 安装（需已连接设备并配置好 Android SDK）：
+
+   ```bash
+   adb install -r app/build/outputs/apk/debug/app-debug.apk
+   ```
+
+### 注意事项
+
+- 本地构建需要安装 Android Studio / Android SDK，并确保命令行下 `adb devices` 能正常列出设备；
+- `prebuild` 之后，项目将包含原生工程，升级 Expo SDK 或修改配置时请参考官方文档，谨慎手动更改 `android/`；
+- 本地 Debug APK 仅用于开发调试，不适合作为商店上架包，**正式发布仍优先推荐使用上文的 EAS Build 流程**。
+
+---
+
+## 项目结构（开发视角）
+
+核心目录与文件示例（仅列出与路由 / UI / 配置强相关的部分）：
+
+- `app/`
+  - `_layout.tsx`：根栈导航、主题（`ThemeProvider`）、`StatusBar` 配置
+  - `(tabs)/_layout.tsx`：底部 Tab 布局，配置 `首页 / 手机壁纸 / 头像壁纸` 三个 Tab
+  - `(tabs)/index.tsx`：首页示例页（`ParallaxScrollView`、`HelloWave` 等）
+  - `(tabs)/mobile-wallpaper.tsx`：手机壁纸列表页（待按业务实现）
+  - `(tabs)/avatar-wallpaper.tsx`：头像壁纸列表页（待按业务实现）
+
+- `components/`
+  - `parallax-scroll-view.tsx`：带视差效果的滚动容器
+  - `themed-text.tsx` / `themed-view.tsx`：支持明暗主题的基础组件
+  - `haptic-tab.tsx`：Tab 点击震动反馈封装
+  - `ui/icon-symbol.tsx`：图标封装，统一使用 SF Symbols / Material Icons 等
+
+- `constants/`
+  - `theme.ts`：主题颜色、字体等设计系统常量
+
+- `hooks/`
+  - `use-color-scheme.ts`：封装系统明暗主题获取逻辑
+
+- `scripts/`
+  - `reset-project.js`：清理模板代码 / 重置项目结构的脚本
+
+> 具体目录和文件可根据后续业务演进调整，建议保持 UI 组件（`components`）、主题常量（`constants`）、业务页面（`app`）三层清晰分层。
