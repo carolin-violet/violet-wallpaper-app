@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   useWindowDimensions,
@@ -25,29 +26,43 @@ const DEFAULT_CATEGORIES: CategoryItem[] = [];
 function useCategories() {
   const [list, setList] = useState<CategoryItem[]>(DEFAULT_CATEGORIES);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    let cancelled = false;
-    getAllDictionariesApiDictionariesGet({
-      params: { query: { type: 0 } },
-    } as unknown as Parameters<typeof getAllDictionariesApiDictionariesGet>[0])
-      .then((res) => {
-        if (cancelled) return;
-        const data = res as unknown as { records?: CategoryItem[] };
-        if (Array.isArray(data?.records) && data.records.length > 0) {
-          setList(data.records);
-        }
-      })
-      .catch(() => {})
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  /**
+   * 拉取分类数据。
+   * @param isRefresh 是否为下拉刷新场景，为 true 时不触发首屏 loading
+   */
+  const fetchCategories = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    try {
+      const res = await getAllDictionariesApiDictionariesGet({
+        params: { query: { type: 0 } },
+      } as unknown as Parameters<typeof getAllDictionariesApiDictionariesGet>[0]);
+      const data = res as unknown as { records?: CategoryItem[] };
+      if (Array.isArray(data?.records)) {
+        setList(data.records);
+      }
+    } catch {
+    } finally {
+      if (!isRefresh) setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
-  return { categories: list, loading };
+  useEffect(() => {
+    void fetchCategories();
+  }, [fetchCategories]);
+
+  /**
+   * 触发分类页下拉刷新。
+   */
+  const refreshCategories = useCallback(() => {
+    if (loading || refreshing) return;
+    setRefreshing(true);
+    void fetchCategories(true);
+  }, [loading, refreshing, fetchCategories]);
+
+  return { categories: list, loading, refreshing, refreshCategories };
 }
 
 const HEADER_TOP_PADDING = 12;
@@ -57,7 +72,7 @@ export default function MobileWallpaperCategoryScreen() {
   const { width } = useWindowDimensions();
   const colorScheme = useColorScheme();
   const router = useRouter();
-  const { categories, loading } = useCategories();
+  const { categories, loading, refreshing, refreshCategories } = useCategories();
 
   const padding = 16;
   const gap = 12;
@@ -98,6 +113,14 @@ export default function MobileWallpaperCategoryScreen() {
         ]}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refreshCategories}
+            tintColor={palette.tint}
+            colors={[palette.tint]}
+          />
+        }
       >
         <View
           style={[

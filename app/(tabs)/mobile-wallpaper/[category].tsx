@@ -61,6 +61,7 @@ export default function MobileWallpaperDetailScreen() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   /** 筛选：all=全部，featured=精华 */
   const [filterType, setFilterType] = useState<FilterType>('all');
   /** 当前选中要操作的图片，非空时显示操作弹层 */
@@ -120,8 +121,13 @@ export default function MobileWallpaperDetailScreen() {
    * @param nextFilter 当前要使用的筛选条件（用于切换时避免闭包时序问题）
    */
   const fetchPage = useCallback(
-    async (page: number, append: boolean, nextFilter: FilterType = filterType) => {
-      if (page === 1) setLoading(true);
+    async (
+      page: number,
+      append: boolean,
+      nextFilter: FilterType = filterType,
+      isRefresh = false, // 是否为下拉刷新场景
+    ) => {
+      if (page === 1 && !isRefresh) setLoading(true);
       try {
         const data = await listWallpapersApiPicturesListGet({
           params: {
@@ -141,8 +147,9 @@ export default function MobileWallpaperDetailScreen() {
           setRecords(data.records ?? []);
         }
       } finally {
-        setLoading(false);
+        if (!isRefresh) setLoading(false);
         setLoadingMore(false);
+        setRefreshing(false);
       }
     },
     [categoryCode, filterType],
@@ -173,12 +180,24 @@ export default function MobileWallpaperDetailScreen() {
   );
 
   const loadMore = useCallback(() => {
-    if (loadingMore || loading || !hasMore) return;
+    if (loadingMore || loading || refreshing || !hasMore) return;
     const next = pageNum + 1;
     setPageNum(next);
     setLoadingMore(true);
     fetchPage(next, true);
-  }, [loadingMore, loading, hasMore, pageNum, fetchPage]);
+  }, [loadingMore, loading, refreshing, hasMore, pageNum, fetchPage]);
+
+  /**
+   * 下拉刷新列表：保持当前分类与筛选条件，重新请求第一页。
+   */
+  const handleRefresh = useCallback(() => {
+    if (loading || refreshing) return;
+    setPageNum(1);
+    setTotal(0);
+    setLoadingMore(false);
+    setRefreshing(true);
+    fetchPage(1, false, filterType, true);
+  }, [loading, refreshing, filterType, fetchPage]);
 
   const imageUri = (item: PictureItem) =>
     item.thumbnail_url ?? item.webp_url ?? null;
@@ -198,6 +217,8 @@ export default function MobileWallpaperDetailScreen() {
         keyExtractor={(item: PictureItem) => String(item.id)}
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
         onEndReached={loadMore}
         onEndReachedThreshold={0.3}
         contentContainerStyle={{
