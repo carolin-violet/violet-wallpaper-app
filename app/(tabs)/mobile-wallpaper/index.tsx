@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AppCopywriting } from '@/constants/copywriting';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { getAllDictionariesApiDictionariesGet } from '@/src/api/controllers/dictionaries';
@@ -63,6 +64,8 @@ export default function MobileWallpaperCategoryScreen() {
   const numColumns = 2;
   const cardWidth = (width - padding * 2 - gap) / numColumns;
   const topInset = insets.top + HEADER_TOP_PADDING;
+  const scheme = colorScheme ?? 'light';
+  const palette = Colors[scheme];
 
   const onCategoryPress = useCallback(
     (category: CategoryItem) => {
@@ -75,13 +78,12 @@ export default function MobileWallpaperCategoryScreen() {
     [router],
   );
 
-  const isDark = colorScheme === 'dark';
-  const cardBg = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
+  const cardBg = palette.elevated;
 
   if (loading) {
     return (
       <ThemedView style={[styles.centered, { paddingTop: insets.top }]}>
-        <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+        <ActivityIndicator size="large" color={palette.tint} />
       </ThemedView>
     );
   }
@@ -97,8 +99,21 @@ export default function MobileWallpaperCategoryScreen() {
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
       >
+        <View
+          style={[
+            styles.hero,
+            { backgroundColor: palette.surfaceSoft, borderColor: palette.border },
+          ]}
+        >
+          <ThemedText type="title" style={[styles.heroTitle, { color: palette.tint }]}>
+            手机壁纸
+          </ThemedText>
+          <ThemedText style={styles.heroText}>
+            {AppCopywriting.mobile.heroText}
+          </ThemedText>
+        </View>
         <ThemedText type="subtitle" style={styles.title}>
-          选择分类
+          {AppCopywriting.mobile.pickCategory}
         </ThemedText>
         <View style={[styles.grid, { gap }]}>
           {categories.map((category) => (
@@ -110,7 +125,8 @@ export default function MobileWallpaperCategoryScreen() {
                 {
                   width: cardWidth,
                   backgroundColor: cardBg,
-                  opacity: pressed ? 0.8 : 1,
+                  borderColor: palette.border,
+                  transform: [{ scale: pressed ? 0.98 : 1 }],
                 },
               ]}
             >
@@ -137,7 +153,24 @@ const styles = StyleSheet.create({
     paddingBottom: 32,
   },
   title: {
-    marginBottom: 8,
+    marginBottom: 10,
+  },
+  hero: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  heroTitle: {
+    fontSize: 28,
+    lineHeight: 34,
+    marginBottom: 6,
+  },
+  heroText: {
+    fontSize: 14,
+    lineHeight: 20,
+    opacity: 0.78,
   },
   grid: {
     flexDirection: 'row',
@@ -146,9 +179,15 @@ const styles = StyleSheet.create({
   card: {
     paddingVertical: 20,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#2b1a3a',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
   },
   cardText: {
     fontSize: 15,

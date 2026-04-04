@@ -5,27 +5,43 @@
 
 import { Platform } from 'react-native';
 
-/** 天蓝 / 浅蓝色系：亮色主题主色 */
-const tintColorLight = '#0ea5e9';
-/** 深色主题下强调色（浅蓝） */
-const tintColorDark = '#7dd3fc';
+/** 紫罗兰主色（亮色主题） */
+const tintColorLight = '#7f5aa6';
+/** 紫罗兰主色（深色主题） */
+const tintColorDark = '#caa6eb';
 
 export const Colors = {
   light: {
-    text: '#0f172a',
-    background: '#f8fcff',
+    text: '#2f2438',
+    background: '#f6f1f8',
     tint: tintColorLight,
-    icon: '#64748b',
-    tabIconDefault: '#94a3b8',
+    icon: '#8d7a9f',
+    tabIconDefault: '#b7a8c7',
     tabIconSelected: tintColorLight,
+    surface: '#fbf8fd',
+    surfaceSoft: '#f1e9f8',
+    border: '#dfd1eb',
+    elevated: '#ffffff',
+    chip: '#ece1f5',
+    chipActive: '#d8c3eb',
+    overlay: 'rgba(34, 16, 48, 0.45)',
+    gold: '#b99462',
   },
   dark: {
-    text: '#f1f5f9',
-    background: '#0f172a',
+    text: '#f1e8fb',
+    background: '#191325',
     tint: tintColorDark,
-    icon: '#94a3b8',
-    tabIconDefault: '#64748b',
+    icon: '#aa97bb',
+    tabIconDefault: '#6f5f82',
     tabIconSelected: tintColorDark,
+    surface: '#231a34',
+    surfaceSoft: '#2a1f3d',
+    border: '#43335f',
+    elevated: '#2e2442',
+    chip: '#302346',
+    chipActive: '#493468',
+    overlay: 'rgba(11, 7, 18, 0.65)',
+    gold: '#d3b181',
   },
 };
 
@@ -47,8 +63,8 @@ export const Fonts = Platform.select({
     mono: 'monospace',
   },
   web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
+    sans: "'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', system-ui, sans-serif",
+    serif: "'Noto Serif SC', 'Songti SC', Georgia, serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
   },

@@ -1,5 +1,6 @@
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+import { AppCopywriting } from '@/constants/copywriting';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import {
@@ -41,6 +42,8 @@ export default function AvatarWallpaperScreen() {
   const padding = 16;
   const columnWidth = (width - padding * 2 - gap) / 2;
   const topInset = insets.top + HEADER_TOP_PADDING;
+  const scheme = colorScheme ?? 'light';
+  const palette = Colors[scheme];
 
   const [records, setRecords] = useState<PictureItem[]>([]);
   const [pageNum, setPageNum] = useState(1);
@@ -60,7 +63,7 @@ export default function AvatarWallpaperScreen() {
     const item = selectedItem;
     if (!item) return;
     if (Platform.OS === 'web') {
-      Alert.alert('提示', '请使用手机 App 下载到相册');
+      Alert.alert(AppCopywriting.avatar.alert.tip, AppCopywriting.avatar.alert.webTip);
       return;
     }
     setDownloading(true);
@@ -70,7 +73,7 @@ export default function AvatarWallpaperScreen() {
       });
       const uri = detail.url ?? detail.webp_url ?? detail.thumbnail_url ?? null;
       if (!uri) {
-        Alert.alert('失败', '无法获取图片地址');
+        Alert.alert(AppCopywriting.avatar.alert.fail, AppCopywriting.avatar.alert.noImage);
         return;
       }
       const ext = uri.includes('.webp') ? 'webp' : 'jpg';
@@ -79,14 +82,14 @@ export default function AvatarWallpaperScreen() {
 
       const { status } = await MediaLibrary.requestPermissionsAsync(true);
       if (status !== 'granted') {
-        Alert.alert('需要权限', '请允许保存到相册，否则无法在相册中查看');
+        Alert.alert(AppCopywriting.avatar.alert.needPermission, AppCopywriting.avatar.alert.permissionContent);
         return;
       }
       await MediaLibrary.saveToLibraryAsync(dest.uri);
-      Alert.alert('成功', '已保存到相册，可在相册/图库中查看');
+      Alert.alert(AppCopywriting.avatar.alert.success, AppCopywriting.avatar.alert.saveSuccess);
       setSelectedItem(null);
     } catch (err) {
-      Alert.alert('下载失败', (err as Error)?.message ?? '请稍后重试');
+      Alert.alert(AppCopywriting.avatar.alert.downloadFail, (err as Error)?.message ?? AppCopywriting.avatar.alert.retryTip);
     } finally {
       setDownloading(false);
     }
@@ -161,8 +164,8 @@ export default function AvatarWallpaperScreen() {
   const imageUri = (item: PictureItem) =>
     item.thumbnail_url ?? item.webp_url ?? null;
 
-  const isDark = colorScheme === 'dark';
-  const cardBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
+  const isDark = scheme === 'dark';
+  const cardBg = palette.elevated;
 
   const listContentPaddingHorizontal = padding - gap / 2;
 
@@ -186,10 +189,10 @@ export default function AvatarWallpaperScreen() {
         }}
         ListHeaderComponent={
           <View style={{ paddingHorizontal: gap / 2 }}>
-            <ThemedText type="subtitle" style={styles.detailTitle}>
-              头像壁纸
+            <ThemedText type="subtitle" style={[styles.detailTitle, { color: palette.tint }]}>
+              {AppCopywriting.avatar.title}
             </ThemedText>
-            <View style={[styles.filterRow, { backgroundColor: cardBg }]}>
+            <View style={[styles.filterRow, { backgroundColor: palette.chip }]}>
               <Pressable
                 style={({ pressed }) => [
                   styles.filterItem,
@@ -202,7 +205,7 @@ export default function AvatarWallpaperScreen() {
                   type="defaultSemiBold"
                   style={filterType === 'all' ? styles.filterTextActive : styles.filterText}
                 >
-                  全部
+                  {AppCopywriting.avatar.all}
                 </ThemedText>
               </Pressable>
               <Pressable
@@ -217,7 +220,7 @@ export default function AvatarWallpaperScreen() {
                   type="defaultSemiBold"
                   style={filterType === 'featured' ? styles.filterTextActive : styles.filterText}
                 >
-                  精华
+                  {AppCopywriting.avatar.featured}
                 </ThemedText>
               </Pressable>
             </View>
@@ -226,12 +229,12 @@ export default function AvatarWallpaperScreen() {
         ListEmptyComponent={
           loading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color={Colors[colorScheme ?? 'light'].tint} />
+              <ActivityIndicator size="large" color={palette.tint} />
             </View>
           ) : (
             <View style={styles.emptyBox}>
               <ThemedText type="defaultSemiBold" style={styles.emptyText}>
-                {filterType === 'featured' ? '暂无精华头像壁纸' : '暂无头像壁纸'}
+                {filterType === 'featured' ? AppCopywriting.avatar.emptyFeatured : AppCopywriting.avatar.emptyAll}
               </ThemedText>
             </View>
           )
@@ -241,13 +244,13 @@ export default function AvatarWallpaperScreen() {
             <View style={styles.footer}>
               {loadingMore ? (
                 <>
-                  <ActivityIndicator size="small" color={Colors[colorScheme ?? 'light'].tint} />
-                  <ThemedText style={styles.footerHintText}>加载中…</ThemedText>
+                  <ActivityIndicator size="small" color={palette.tint} />
+                  <ThemedText style={styles.footerHintText}>{AppCopywriting.avatar.loadingMore}</ThemedText>
                 </>
               ) : hasMore ? (
-                <ThemedText style={styles.footerHintText}>上拉加载更多</ThemedText>
+                <ThemedText style={styles.footerHintText}>{AppCopywriting.avatar.loadMore}</ThemedText>
               ) : (
-                <ThemedText style={styles.footerHintText}>没有更多了</ThemedText>
+                <ThemedText style={styles.footerHintText}>{AppCopywriting.avatar.noMore}</ThemedText>
               )}
             </View>
           ) : null
@@ -261,6 +264,7 @@ export default function AvatarWallpaperScreen() {
                 width: columnWidth,
                 height: columnWidth * (item.height / item.width),
                 backgroundColor: cardBg,
+                borderColor: palette.border,
                 marginHorizontal: gap / 2,
                 marginBottom: gap,
               },
@@ -271,6 +275,14 @@ export default function AvatarWallpaperScreen() {
               style={StyleSheet.absoluteFill}
               contentFit="cover"
               recyclingKey={String(item.id)}
+            />
+            <View
+              style={[
+                styles.imageOverlay,
+                {
+                  backgroundColor: isDark ? 'rgba(20,12,30,0.14)' : 'rgba(127,90,166,0.08)',
+                },
+              ]}
             />
           </Pressable>
         )}
@@ -283,21 +295,30 @@ export default function AvatarWallpaperScreen() {
         onRequestClose={() => setSelectedItem(null)}
       >
         <Pressable
-          style={styles.modalBackdrop}
+          style={[styles.modalBackdrop, { backgroundColor: palette.overlay }]}
           onPress={() => setSelectedItem(null)}
         >
           <Pressable
             style={[
               styles.modalContent,
-              { backgroundColor: isDark ? Colors.dark.background : '#fff' },
+              {
+                backgroundColor: palette.surface,
+                borderColor: palette.border,
+              },
             ]}
             onPress={() => { }}
           >
-            <ThemedText type="subtitle" style={styles.modalTitle}>
-              保存图片
-            </ThemedText>
+            <View style={[styles.envelopeFlap, { backgroundColor: palette.surfaceSoft }]} />
+            <View style={styles.envelopeHeader}>
+              <View style={[styles.envelopeSeal, { backgroundColor: palette.tint }]}>
+                <ThemedText style={styles.envelopeSealText}>V</ThemedText>
+              </View>
+              <ThemedText type="subtitle" style={[styles.envelopeTitle, { color: palette.tint }]}>
+                {AppCopywriting.avatar.sheet.title}
+              </ThemedText>
+            </View>
             <Pressable
-              style={[styles.modalButton, styles.modalButtonPrimary]}
+              style={[styles.modalButton, { backgroundColor: palette.tint }]}
               onPress={handleDownload}
               disabled={downloading}
             >
@@ -305,22 +326,22 @@ export default function AvatarWallpaperScreen() {
                 <ActivityIndicator size="small" color="#fff" />
               ) : (
                 <ThemedText style={styles.modalButtonPrimaryText}>
-                  下载到本地
+                  {AppCopywriting.avatar.sheet.download}
                 </ThemedText>
               )}
             </Pressable>
             <Pressable
               style={[
                 styles.modalButton,
-                { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' },
+                { backgroundColor: palette.chip },
               ]}
               onPress={() => setSelectedItem(null)}
               disabled={downloading}
             >
               <ThemedText
-                style={[styles.modalButtonText, { color: isDark ? Colors.dark.text : '#333' }]}
+                style={[styles.modalButtonText, { color: palette.text }]}
               >
-                取消
+                {AppCopywriting.avatar.sheet.cancel}
               </ThemedText>
             </Pressable>
           </Pressable>
@@ -340,9 +361,9 @@ const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     alignSelf: 'flex-start',
-    borderRadius: 999,
+    borderRadius: 9999,
     padding: 4,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   filterItem: {
     paddingVertical: 8,
@@ -350,7 +371,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   filterItemActive: {
-    backgroundColor: 'rgba(99,102,241,0.18)',
+    backgroundColor: 'rgba(127,90,166,0.26)',
   },
   filterItemPressed: {
     opacity: 0.85,
@@ -362,8 +383,17 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
   card: {
-    borderRadius: 12,
+    borderRadius: 14,
+    borderWidth: 1,
     overflow: 'hidden',
+    shadowColor: '#2b1b3b',
+    shadowOffset: { width: 0, height: 7 },
+    shadowOpacity: 0.06,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  imageOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   emptyText: {
     opacity: 0.6,
@@ -397,7 +427,6 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
@@ -408,18 +437,42 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     gap: 12,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  modalTitle: {
-    marginBottom: 4,
-    textAlign: 'center',
+  envelopeFlap: {
+    height: 56,
+    borderBottomLeftRadius: 26,
+    borderBottomRightRadius: 26,
+    marginHorizontal: -20,
+    marginTop: -20,
+    marginBottom: 8,
+  },
+  envelopeHeader: {
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  envelopeSeal: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: -30,
+    marginBottom: 8,
+  },
+  envelopeSealText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  envelopeTitle: {
+    fontSize: 18,
   },
   modalButton: {
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
-  },
-  modalButtonPrimary: {
-    backgroundColor: Colors.light?.tint ?? '#6366f1',
   },
   modalButtonPrimaryText: {
     color: '#fff',
